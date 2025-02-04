@@ -1,61 +1,58 @@
-//
-//  ContentView.swift
-//  Fitness
-//
-//  Created by Harry Phillips on 03/02/2025.
-//
-
 import SwiftUI
-import SwiftData
+import FirebaseAuth
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
-
+    @EnvironmentObject var authManager: AuthManager
+    
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
+        Group {
+            if authManager.isLoading {
+                // Show loading indicator while data is fetched
+                ProgressView("Loading...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color("Background"))
+            } else if let user = authManager.currentUser {
+                if authManager.currentGroup != nil {
+                    // User has a group, go to home
+                    roleBasedHomeView
+                } else {
+                    // User has no group, show code entry or group creation
+                    roleBasedGroupActionView
                 }
-                .onDelete(perform: deleteItems)
+            } else {
+                // No authenticated user, show initial screen
+                InitialScreenView()
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
+        }
+        .task {
+            // Set up listeners when the view appears
+            if let user = Auth.auth().currentUser {
+                authManager.setupListeners(uid: user.uid)
             }
-        } detail: {
-            Text("Select an item")
         }
     }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+    
+    private var roleBasedHomeView: some View {
+        Group {
+            if authManager.currentUser?.role == .coach {
+                CoachHome()
+            } else {
+                ClientHome()
+            }
         }
     }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+    
+    private var roleBasedGroupActionView: some View {
+        Group {
+            if authManager.currentUser?.role == .coach {
+                CreateGroup()
+            } else {
+                EnterCodeView() // Direct clients to code entry
             }
         }
     }
 }
 
 #Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+    ContentView().environmentObject(AuthManager.shared)
 }

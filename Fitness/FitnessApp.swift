@@ -7,26 +7,19 @@
 
 import SwiftUI
 import SwiftData
+import Firebase
 
 @main
 struct FitnessApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    @StateObject private var authManager = AuthManager.shared
+    init() {
+        FirebaseApp.configure()
+    }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environmentObject(authManager)
         }
-        .modelContainer(sharedModelContainer)
     }
 }
