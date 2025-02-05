@@ -21,7 +21,7 @@ struct ContentView: View {
                 }
             } else {
                 // No authenticated user, show initial screen
-                InitialScreenView()
+                LoginView ()
             }
         }
         .task {
