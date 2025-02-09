@@ -22,7 +22,7 @@ struct WeightGraphView: View {
                             x: .value("Date", entry.date),
                             y: .value("Weight", entry.weight)
                         )
-                        .foregroundStyle(Color.green)
+                        .foregroundStyle(Color("Accent"))
                         PointMark(
                             x: .value("Date", entry.date),
                             y: .value("Weight", entry.weight)

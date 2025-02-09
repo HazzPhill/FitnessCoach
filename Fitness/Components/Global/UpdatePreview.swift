@@ -38,35 +38,32 @@ struct UpdatePreview: View {
     
     var body: some View {
         HStack {
-            // Use AsyncImage to load the image from the URL.
-            if let imageUrl = imageUrl, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image
-                            .resizable()
-                            .scaledToFit()
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                    } else if phase.error != nil {
-                        // In case of error, fallback to the default image.
-                        Image("gym_background")
-                            .resizable()
-                            .scaledToFill()
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-                    } else {
-                        ProgressView()
+                if let imageUrl = imageUrl, let url = URL(string: imageUrl) {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 60, height: 60)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                        } else if phase.error != nil {
+                            Image("gym_background")
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 60, height: 60)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                        } else {
+                            ProgressView()
+                                .frame(width: 60, height: 60)
+                        }
                     }
+                } else {
+                    Image("gym_background")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 60, height: 83)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
-                .frame(width: 60, height: 83)
-                .clipped()
-            } else {
-                // Fallback to the default image if there's no URL.
-                Image("gym_background")
-                    .resizable()
-                    .scaledToFill()
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .frame(width: 60, height: 83)
-                    .clipped()
-            }
             
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
@@ -83,8 +80,8 @@ struct UpdatePreview: View {
                     .foregroundColor(Color("Accent"))
             }
         }
-        .frame(width: 350, height: 93, alignment: .leading)
-        .padding(.horizontal)
+        .frame(maxWidth: .infinity,maxHeight: 93)
+        .padding()
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color("BoxStroke"), lineWidth: 2)

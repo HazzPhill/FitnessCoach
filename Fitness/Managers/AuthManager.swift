@@ -1,4 +1,5 @@
 import FirebaseAuth
+import Combine
 import FirebaseFirestore
 import FirebaseStorageCombineSwift
 import FirebaseStorage
@@ -13,6 +14,8 @@ class AuthManager: ObservableObject {
     private let auth = Auth.auth()
     private let db = Firestore.firestore()
     private let storage = Storage.storage() // For image uploads
+    
+    private var cancellables = Set<AnyCancellable>()
     
     @Published var currentUser: DBUser?
     @Published var currentGroup: Group?
@@ -152,10 +155,24 @@ class AuthManager: ObservableObject {
             groupImageUrl: nil,
             createdAt: nil
         )
-        let groupRef = try await db.collection("groups").addDocument(from: group)
+        
+        let groupRef: DocumentReference = try await withCheckedThrowingContinuation { continuation in
+            db.collection("groups")
+                .addDocument(from: group)
+                .sink { completion in
+                    if case .failure(let error) = completion {
+                        continuation.resume(throwing: error)
+                    }
+                } receiveValue: { docRef in
+                    continuation.resume(returning: docRef)
+                }
+                .store(in: &self.cancellables)
+        }
+        
         try await db.collection("users").document(user.userId).updateData([
             "groupId": groupRef.documentID
         ])
+        
         return Group(
             id: groupRef.documentID,
             name: name,
@@ -166,6 +183,7 @@ class AuthManager: ObservableObject {
             createdAt: Date()
         )
     }
+
     
     // MARK: - Firestore Operations
     

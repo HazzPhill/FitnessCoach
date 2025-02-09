@@ -15,10 +15,10 @@ struct CoachHome: View {
                             .fontWeight(.semibold)
                             .foregroundStyle(Color("Accent"))
                         Spacer()
-                        // Replace the gym_background image with the user's profile picture.
                         NavigationLink {
                             SettingsView()
                         } label: {
+                            // Profile picture code…
                             if let profileImageUrl = authManager.currentUser?.profileImageUrl,
                                let url = URL(string: profileImageUrl) {
                                 AsyncImage(url: url) { phase in
@@ -54,14 +54,13 @@ struct CoachHome: View {
                         .fontWeight(.regular)
                         .foregroundStyle(.black)
                     
+                    // Your KPI ScrollView …
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack {
                             KPIBox(label: "Clients", figure: 200)
                                 .padding(.trailing, 20)
-                            
                             KPIBox(label: "Total Revenue", figure: 200)
                                 .padding(.trailing, 20)
-                            
                             KPIBox(label: "Total Revenue", figure: 200)
                                 .padding(.trailing, 20)
                         }
@@ -73,11 +72,13 @@ struct CoachHome: View {
                         .fontWeight(.regular)
                         .foregroundStyle(.black)
                     
-                    HStack(spacing: 26) {
-                        ClientBox(clientName: "Harry P", weight: 56, activeTime: "3hr ago")
-                        ClientBox(clientName: "Harry P", weight: 56, activeTime: "3hr ago")
+                    if let group = authManager.currentGroup, let groupId = group.id {
+                        ClientListView(groupId: groupId)
+                    } else {
+                        Text("No group found. Please create or join a group.")
+                            .foregroundColor(.gray)
+                            .padding(.vertical)
                     }
-                    .padding(.vertical)
                     
                     Spacer()
                 }
@@ -89,7 +90,6 @@ struct CoachHome: View {
 
 struct CoachHome_Previews: PreviewProvider {
     static var previews: some View {
-        // Use environmentObject to inject the AuthManager instance
         CoachHome()
             .environmentObject(AuthManager.shared)
     }
