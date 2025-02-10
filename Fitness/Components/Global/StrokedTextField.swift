@@ -132,7 +132,6 @@ struct HeaderSection: View {
                 .foregroundStyle(.white)
                 .font(.system(size: 30, weight: .bold))
         }
-        .padding(.horizontal)
     }
 }
 

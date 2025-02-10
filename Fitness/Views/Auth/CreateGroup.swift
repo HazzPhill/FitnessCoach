@@ -10,7 +10,7 @@ struct CreateGroup: View {
     
     var body: some View {
         NavigationStack {
-            ZStack {
+            ZStack (alignment: .center){
                 Color("SecondaryAccent")
                     .ignoresSafeArea()
                 

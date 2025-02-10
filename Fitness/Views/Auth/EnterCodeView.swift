@@ -6,7 +6,7 @@ struct EnterCodeView: View {
     @State private var showError = false
     
     var body: some View {
-        ZStack {
+        ZStack (alignment: .center){
             Color("SecondaryAccent")
                 .ignoresSafeArea()
             

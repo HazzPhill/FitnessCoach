@@ -88,6 +88,7 @@ struct RegisterView: View {
         }
     }
     
+    
     private func registerUser() {
         guard password == confirmPassword else {
             authManager.errorMessage = "Passwords do not match"
@@ -111,6 +112,7 @@ struct RegisterView: View {
         }
     }
 }
+
 
 struct RolePicker: View {
     @Binding var selectedRole: UserRole
