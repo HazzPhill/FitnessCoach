@@ -70,7 +70,7 @@ struct IngredientAccordionView: View {
         .padding(.vertical, 5)
         .background(Color.white.opacity(0.1))
         .cornerRadius(8)
-        .padding(.horizontal)
+
     }
 }
 
@@ -100,22 +100,17 @@ struct UploadMealPlanView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Meal Information")
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(Color("SecondaryAccent"))
                                 .padding(.horizontal)
                             
                             ModernTextField(placeholder: "Meal Name", text: $mealName)
-                                .padding(.horizontal)
-                            
-                            Text("Meal Type: \(mealType)")
-                                .foregroundColor(.white.opacity(0.7))
-                                .padding(.horizontal)
                         }
                         
                         // Meal Image Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Meal Image")
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(Color("SecondaryAccent"))
                                 .padding(.horizontal)
                             
                             if let image = selectedImage {
