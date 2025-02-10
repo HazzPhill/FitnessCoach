@@ -1,6 +1,21 @@
-// StrokedTextField.swift
 import SwiftUI
 
+// MARK: - Custom View Extension for Placeholder
+extension View {
+    @ViewBuilder func placeholder<Content: View>(
+        when shouldShow: Bool,
+        alignment: Alignment = .leading,
+        @ViewBuilder placeholder: () -> Content) -> some View {
+            ZStack(alignment: alignment) {
+                if shouldShow {
+                    placeholder()
+                }
+                self
+            }
+        }
+}
+
+// MARK: - StrokedTextField
 struct StrokedTextField: View {
     @Binding var text: String
     
@@ -12,7 +27,7 @@ struct StrokedTextField: View {
     let labelColor: Color
     let cornerRadius: CGFloat
     let lineWidth: CGFloat
-    let iconName: String? // optional icon
+    let iconName: String? // Optional icon
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -21,10 +36,13 @@ struct StrokedTextField: View {
                 .font(.caption)
                 .foregroundColor(labelColor)
             
-            // Text Field with optional icon
+            // TextField with optional icon
             HStack {
-                TextField(placeholder, text: $text)
+                TextField("", text: $text)
                     .foregroundColor(textColor)
+                    .placeholder(when: text.isEmpty) {
+                        Text(placeholder).foregroundColor(.white) // Custom placeholder color
+                    }
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
                 if let iconName = iconName {
@@ -32,18 +50,17 @@ struct StrokedTextField: View {
                         .foregroundColor(textColor)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 10)
+            .padding()
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .stroke(strokeColor, lineWidth: lineWidth)
             )
         }
-        .padding()
+        .padding(.vertical, 4)
     }
 }
 
-// StrokedSecureField.swift
+// MARK: - StrokedSecureField
 struct StrokedSecureField: View {
     @Binding var text: String
     let label: String
@@ -56,12 +73,17 @@ struct StrokedSecureField: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            // Label
             Text(label)
                 .font(.caption)
                 .foregroundColor(labelColor)
             
-            SecureField(placeholder, text: $text)
+            // SecureField styled with padding
+            SecureField("", text: $text)
                 .foregroundColor(textColor)
+                .placeholder(when: text.isEmpty) {
+                    Text(placeholder).foregroundColor(.white) // Custom placeholder color
+                }
                 .padding()
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius)
@@ -72,7 +94,7 @@ struct StrokedSecureField: View {
     }
 }
 
-// UI Components
+// MARK: - Supporting UI Components
 struct HeaderSection: View {
     let title: String
     let subtitle: String

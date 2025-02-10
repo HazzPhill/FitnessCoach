@@ -5,17 +5,15 @@ struct InitialScreenView: View {
     @State private var showRegisterSheet = false
 
     var body: some View {
-        
         ZStack {
             Color("Background")
                 .ignoresSafeArea()
                 .zIndex(0)
             
             GeometryReader { geometry in
-                VStack(spacing: 0) {
+                VStack(alignment:.center,spacing: 0) {
                     // Top half: Gym background with gradient overlay
                     ZStack {
-                        
                         Image("gym_background")
                             .resizable()
                             .scaledToFill()
@@ -30,15 +28,10 @@ struct InitialScreenView: View {
                                 )
                                 .frame(width: geometry.size.width, height: geometry.size.height / 1.5)
                             }
-                        
-                        // Gradient overlay on top of the image
-                
                     }
                     
                     // Bottom half: Content
-                    VStack {
-                       
-                        
+                    VStack(alignment: .center) {
                         Text("Manage your \nfitness like a\nboss")
                             .font(.system(size: 38))
                             .fontWeight(.semibold)
@@ -50,7 +43,7 @@ struct InitialScreenView: View {
                             .layoutPriority(1) // Gives this text view higher priority in layout
                             .padding(.bottom, 30)
 
-                        
+                        // Login Button
                         Button(action: {
                             showLoginSheet.toggle()
                         }) {
@@ -63,24 +56,34 @@ struct InitialScreenView: View {
                         }
                         .padding(.bottom, 20)
                         .sheet(isPresented: $showLoginSheet) {
-                            // Replace with your login view
+                            LoginView()
+                                .presentationDetents([.medium, .large])
+                                .ignoresSafeArea(.all)
+                                .presentationCornerRadius(30)
+                        }
+                        
+                        // Sign up Hyperlink
+                        HStack {
+                            Text("Don’t have an account?")
+                                .font(.footnote)
+                                .foregroundColor(Color.gray)
+                            Button(action: {
+                                showRegisterSheet.toggle()
+                            }) {
+                                Text("Sign up")
+                                    .underline() // Makes it appear as a link
+                                    .font(.footnote)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundColor(Color.gray)
+                        }
+                        .padding(.bottom, 40)
+                        .sheet(isPresented: $showRegisterSheet) {
                             RegisterView()
                                 .presentationDetents([.large])
                                 .ignoresSafeArea(.all)
                                 .presentationCornerRadius(30)
-                                
                         }
-                        
-                        Text("Don’t have an account? Sign up")
-                            .foregroundColor(Color.gray)
-                            .font(.footnote)
-                            .padding(.bottom, 40)
-                            .sheet(isPresented: $showRegisterSheet) {
-                                // Replace with your registration view
-                                InitialScreenView()
-                                    .presentationDetents([.medium])
-                                    .ignoresSafeArea(.all)
-                            }
                     }
                     .padding(.bottom, 24)
                 }

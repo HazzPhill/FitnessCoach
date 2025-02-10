@@ -6,22 +6,21 @@ struct ContentView: View {
     
     var body: some View {
         Group {
-            if authManager.isLoading {
-                // Show loading indicator while data is fetched
+            // If still loading, OR if Firebase indicates a user but authManager hasn't updated, show loading indicator
+            if authManager.isLoading || (Auth.auth().currentUser != nil && authManager.currentUser == nil) {
                 ProgressView("Loading...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color("Background"))
             } else if let _ = authManager.currentUser {
+                // When authManager.currentUser is populated, show the appropriate view
                 if authManager.currentGroup != nil {
-                    // User has a group, go to home
                     roleBasedHomeView
                 } else {
-                    // User has no group, show code entry or group creation
                     roleBasedGroupActionView
                 }
             } else {
-                // No authenticated user, show initial screen
-                LoginView()
+                // No authenticated user: show the initial screen
+                InitialScreenView()
             }
         }
         .task {
@@ -37,7 +36,6 @@ struct ContentView: View {
             if authManager.currentUser?.role == .coach {
                 CoachHome()
             } else if let client = authManager.currentUser {
-                // Pass the client into ClientHome as required.
                 ClientHome(client: client)
             } else {
                 EmptyView()
