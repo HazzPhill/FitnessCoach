@@ -1,26 +1,9 @@
 import SwiftUI
 import PhotosUI
 
-// A custom modern text field with a clean design
-struct ModernTextField: View {
-    var placeholder: String
-    @Binding var text: String
-    var keyboardType: UIKeyboardType = .default
-    
-    var body: some View {
-        TextField(placeholder, text: $text)
-            .keyboardType(keyboardType)
-            .padding()
-            .background(Color.white.opacity(0.1))
-            .foregroundColor(.white)
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color("Accent"), lineWidth: 1)
-            )
-            .padding(.horizontal)
-    }
-}
+// Make sure that ModernTextField is available via your shared UI components file.
+// For example, if it's in a module called "SharedUI", you might need:
+// import SharedUI
 
 struct AddUpdateView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -49,6 +32,7 @@ struct AddUpdateView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal)
                             
+                            // Referencing the shared ModernTextField
                             ModernTextField(placeholder: "Name", text: $updateName)
                             ModernTextField(placeholder: "Weight (KG)", text: $weightText, keyboardType: .decimalPad)
                         }

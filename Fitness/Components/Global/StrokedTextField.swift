@@ -15,6 +15,27 @@ extension View {
         }
 }
 
+// MARK: - ModernTextField
+struct ModernTextField: View {
+    var placeholder: String
+    @Binding var text: String
+    var keyboardType: UIKeyboardType = .default
+    
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .keyboardType(keyboardType)
+            .padding()
+            .background(Color.white.opacity(0.1))
+            .foregroundColor(.black)
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color("Accent"), lineWidth: 1)
+            )
+            .padding(.horizontal)
+    }
+}
+
 // MARK: - StrokedTextField
 struct StrokedTextField: View {
     @Binding var text: String
@@ -41,7 +62,8 @@ struct StrokedTextField: View {
                 TextField("", text: $text)
                     .foregroundColor(textColor)
                     .placeholder(when: text.isEmpty) {
-                        Text(placeholder).foregroundColor(.white) // Custom placeholder color
+                        Text(placeholder)
+                            .foregroundColor(.white) // Custom placeholder color
                     }
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
@@ -82,7 +104,8 @@ struct StrokedSecureField: View {
             SecureField("", text: $text)
                 .foregroundColor(textColor)
                 .placeholder(when: text.isEmpty) {
-                    Text(placeholder).foregroundColor(.white) // Custom placeholder color
+                    Text(placeholder)
+                        .foregroundColor(.white) // Custom placeholder color
                 }
                 .padding()
                 .overlay(
