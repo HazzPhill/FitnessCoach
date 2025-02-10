@@ -1,14 +1,26 @@
-//
-//  AddUpdateView.swift
-//  Fitness
-//
-//  Created by Harry Phillips on 05/02/2025.
-//
-
-import SwiftUI
-
 import SwiftUI
 import PhotosUI
+
+// A custom modern text field with a clean design
+struct ModernTextField: View {
+    var placeholder: String
+    @Binding var text: String
+    var keyboardType: UIKeyboardType = .default
+    
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .keyboardType(keyboardType)
+            .padding()
+            .background(Color.white.opacity(0.1))
+            .foregroundColor(.white)
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color("Accent"), lineWidth: 1)
+            )
+            .padding(.horizontal)
+    }
+}
 
 struct AddUpdateView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -23,39 +35,74 @@ struct AddUpdateView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section(header: Text("Update Info")) {
-                    TextField("Name", text: $updateName)
-                    TextField("Weight (KG)", text: $weightText)
-                        .keyboardType(.decimalPad)
-                }
+            ZStack {
+                // Set the background color
+                Color("Background")
+                    .ignoresSafeArea()
                 
-                Section(header: Text("Photo")) {
-                    PhotosPicker(selection: $selectedItem, matching: .images) {
-                        if let selectedImage = selectedImage {
-                            Image(uiImage: selectedImage)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 200)
-                        } else {
-                            Text("Select Image")
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Update Info Section
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Update Info")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding(.horizontal)
+                            
+                            ModernTextField(placeholder: "Name", text: $updateName)
+                            ModernTextField(placeholder: "Weight (KG)", text: $weightText, keyboardType: .decimalPad)
                         }
-                    }
-                    .onChange(of: selectedItem) { newItem in
-                        Task {
-                            if let data = try? await newItem?.loadTransferable(type: Data.self),
-                               let image = UIImage(data: data) {
-                                selectedImage = image
+                        
+                        // Photo Section
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Photo")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding(.horizontal)
+                            
+                            PhotosPicker(selection: $selectedItem, matching: .images) {
+                                if let selectedImage = selectedImage {
+                                    Image(uiImage: selectedImage)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(height: 200)
+                                        .clipped()
+                                        .cornerRadius(8)
+                                        .padding(.horizontal)
+                                } else {
+                                    Text("Select Image")
+                                        .foregroundColor(Color("SecondaryAccent"))
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color("Accent").opacity(0.1))
+                                        .cornerRadius(8)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color("Accent"), lineWidth: 1)
+                                        )
+                                        .padding(.horizontal)
+                                }
+                            }
+                            .onChange(of: selectedItem) { newItem in
+                                Task {
+                                    if let data = try? await newItem?.loadTransferable(type: Data.self),
+                                       let image = UIImage(data: data) {
+                                        selectedImage = image
+                                    }
+                                }
                             }
                         }
+                        
+                        // Display error message if needed
+                        if let errorMessage = errorMessage {
+                            Text(errorMessage)
+                                .foregroundColor(.red)
+                                .padding(.horizontal)
+                        }
+                        
+                        Spacer()
                     }
-                }
-                
-                if let errorMessage = errorMessage {
-                    Section {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                    }
+                    .padding(.top)
                 }
             }
             .navigationTitle("Add Update")
@@ -63,16 +110,19 @@ struct AddUpdateView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     if isSubmitting {
                         ProgressView()
+                            .tint(Color("Accent"))
                     } else {
                         Button("Submit") {
                             submitUpdate()
                         }
+                        .foregroundColor(Color("Accent"))
                     }
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(Color("Accent"))
                 }
             }
         }
