@@ -4,11 +4,12 @@ import FirebaseFirestore
 import CachedAsyncImage
 
 struct ClientHome: View {
+    let client: AuthManager.DBUser
     @EnvironmentObject var authManager: AuthManager
     @State private var showingAddUpdate = false  // Controls presentation of AddUpdateView
     @Namespace private var namespace
     
-    // Compute weight entries from the realtime updates in AuthManager for the current year.
+    // Compute weight entries.
     var weightEntries: [WeightEntry] {
         let calendar = Calendar.current
         let currentYear = calendar.component(.year, from: Date())
@@ -25,9 +26,9 @@ struct ClientHome: View {
         NavigationStack {
             ZStack {
                 Color("Background")
-                    .ignoresSafeArea(edges: .all)
+                    .ignoresSafeArea()
                 ScrollView {
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 20) {
                         // Header Section
                         HStack {
                             Text("Welcome \(authManager.currentUser?.firstName ?? "")")
@@ -35,39 +36,28 @@ struct ClientHome: View {
                                 .fontWeight(.semibold)
                                 .foregroundStyle(Color("Accent"))
                             Spacer()
-                            // Use a cached profile image if available.
                             NavigationLink {
                                 SettingsView()
                             } label: {
                                 if let profileImageUrl = authManager.currentUser?.profileImageUrl,
                                    let url = URL(string: profileImageUrl) {
-                                    if let cachedProfile = ImagePrefetcher.shared.image(for: url) {
-                                        Image(uiImage: cachedProfile)
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 45, height: 45)
-                                            .clipShape(Circle())
-                                    } else {
-                                        CachedAsyncImage(url: url) { phase in
-                                            switch phase {
-                                            case .empty:
-                                                ProgressView()
-                                                    .frame(width: 45, height: 45)
-                                            case .success(let image):
-                                                image
-                                                    .resizable()
-                                                    .scaledToFill()
-                                                    .frame(width: 45, height: 45)
-                                                    .clipShape(Circle())
-                                            case .failure(_):
-                                                Image(systemName: "person.circle")
-                                                    .resizable()
-                                                    .scaledToFill()
-                                                    .frame(width: 45, height: 45)
-                                                    .clipShape(Circle())
-                                            @unknown default:
-                                                EmptyView()
-                                            }
+                                    CachedAsyncImage(url: url) { phase in
+                                        switch phase {
+                                        case .empty:
+                                            ProgressView().frame(width: 45, height: 45)
+                                        case .success(let image):
+                                            image.resizable()
+                                                .scaledToFill()
+                                                .frame(width: 45, height: 45)
+                                                .clipShape(Circle())
+                                        case .failure(_):
+                                            Image(systemName: "person.circle")
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 45, height: 45)
+                                                .clipShape(Circle())
+                                        @unknown default:
+                                            EmptyView()
                                         }
                                     }
                                 } else {
@@ -84,24 +74,20 @@ struct ClientHome: View {
                             .font(.title2)
                             .fontWeight(.regular)
                             .foregroundStyle(.black)
-                        
-                        // Graph view of weight entries
                         WeightGraphView(weightEntries: weightEntries)
                         
                         Text("Your Plan")
                             .font(.title2)
                             .fontWeight(.regular)
                             .foregroundStyle(.black)
-                        
-                        ScrollView(.horizontal) {
+                        // Horizontal scroll with 7 day cards.
+                        ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 20) {
-                                ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { day in
-                                    dayMealPlanPreview(day: day, meal: "Meal 1", snack: "Snack 1")
+                                ForEach(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], id: \.self) { day in
+                                    DayMealPlanCard(day: day,
+                                                    clientId: client.userId,
+                                                    isCoach: false)
                                         .frame(width: 260)
-                                        .scrollTransition(.animated, transition: { content, phase in
-                                            content
-                                                .scaleEffect(phase.isIdentity ? 1 : 0.9)
-                                        })
                                 }
                             }
                             .padding(.vertical)
@@ -127,7 +113,6 @@ struct ClientHome: View {
                             }
                         }
                         
-                        // Latest updates list
                         ScrollView {
                             if authManager.latestUpdates.isEmpty {
                                 Text("No updates yet.")
@@ -165,6 +150,16 @@ struct ClientHome: View {
 }
 
 #Preview {
-    ClientHome()
+    let dummyClient = AuthManager.DBUser(
+        userId: "client123",
+        firstName: "John",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+        role: .client,
+        groupId: "group123",
+        profileImageUrl: nil,
+        createdAt: nil
+    )
+    ClientHome(client: dummyClient)
         .environmentObject(AuthManager.shared)
 }

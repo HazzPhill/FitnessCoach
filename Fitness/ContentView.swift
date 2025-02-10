@@ -11,7 +11,7 @@ struct ContentView: View {
                 ProgressView("Loading...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color("Background"))
-            } else if let user = authManager.currentUser {
+            } else if let _ = authManager.currentUser {
                 if authManager.currentGroup != nil {
                     // User has a group, go to home
                     roleBasedHomeView
@@ -21,7 +21,7 @@ struct ContentView: View {
                 }
             } else {
                 // No authenticated user, show initial screen
-                LoginView ()
+                LoginView()
             }
         }
         .task {
@@ -36,8 +36,11 @@ struct ContentView: View {
         Group {
             if authManager.currentUser?.role == .coach {
                 CoachHome()
+            } else if let client = authManager.currentUser {
+                // Pass the client into ClientHome as required.
+                ClientHome(client: client)
             } else {
-                ClientHome()
+                EmptyView()
             }
         }
     }

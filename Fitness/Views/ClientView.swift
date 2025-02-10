@@ -8,7 +8,7 @@ struct ClientView: View {
     @StateObject private var updatesViewModel: ClientUpdatesViewModel
     @Namespace private var namespace
 
-    // Compute weight entries for the current year from this client's updates.
+    // Compute weight entries for this client's updates.
     var weightEntries: [WeightEntry] {
         let calendar = Calendar.current
         let currentYear = calendar.component(.year, from: Date())
@@ -21,7 +21,6 @@ struct ClientView: View {
         .sorted { $0.date < $1.date }
     }
     
-    // Initialize with a client; create a view model for that client's updates.
     init(client: AuthManager.DBUser) {
         self.client = client
         _updatesViewModel = StateObject(wrappedValue: ClientUpdatesViewModel(clientId: client.userId))
@@ -31,9 +30,9 @@ struct ClientView: View {
         NavigationStack {
             ZStack {
                 Color("Background")
-                    .ignoresSafeArea(edges: .all)
+                    .ignoresSafeArea()
                 ScrollView {
-                    VStack(alignment: .leading) {
+                    VStack(alignment: .leading, spacing: 20) {
                         // Header Section
                         HStack {
                             Text("\(client.firstName)'s Dashboard")
@@ -41,7 +40,6 @@ struct ClientView: View {
                                 .fontWeight(.semibold)
                                 .foregroundStyle(Color("Accent"))
                             Spacer()
-                            // In this example we show the client's profile picture.
                             if let profileImageUrl = client.profileImageUrl,
                                let url = URL(string: profileImageUrl) {
                                 NavigationLink {
@@ -50,11 +48,9 @@ struct ClientView: View {
                                     CachedAsyncImage(url: url) { phase in
                                         switch phase {
                                         case .empty:
-                                            ProgressView()
-                                                .frame(width: 45, height: 45)
+                                            ProgressView().frame(width: 45, height: 45)
                                         case .success(let image):
-                                            image
-                                                .resizable()
+                                            image.resizable()
                                                 .scaledToFill()
                                                 .frame(width: 45, height: 45)
                                                 .clipShape(Circle())
@@ -78,45 +74,39 @@ struct ClientView: View {
                             }
                         }
                         
+                        // Progress Section
                         Text("Progress")
                             .font(.title2)
                             .fontWeight(.regular)
                             .foregroundStyle(.black)
-                        
-                        // Graph view of weight entries for this client.
                         WeightGraphView(weightEntries: weightEntries)
                         
+                        // Plan Section: One horizontal scroll view with 7 cards.
                         Text("Plan")
                             .font(.title2)
                             .fontWeight(.regular)
                             .foregroundStyle(.black)
-                        
-                        // Example horizontal scroll for the client's meal plan.
-                        ScrollView(.horizontal) {
+                        ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 20) {
                                 ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { day in
-                                    dayMealPlanPreview(day: day, meal: "Meal 1", snack: "Snack 1")
+                                    DayMealPlanCard(day: day,
+                                                    clientId: client.userId,
+                                                    isCoach: true) // or set false if needed
                                         .frame(width: 260)
-                                        .scrollTransition(.animated, transition: { content, phase in
-                                            content
-                                                .scaleEffect(phase.isIdentity ? 1 : 0.9)
-                                        })
                                 }
                             }
                             .padding(.vertical)
                         }
                         .scrollIndicators(.hidden)
                         
+                        // Updates Section (unchanged)
                         HStack {
                             Text("Updates")
                                 .font(.title2)
                                 .fontWeight(.regular)
                                 .foregroundStyle(.black)
                             Spacer()
-                            // You might remove the add-update button here since the coach may not be adding updates for a client.
                         }
-                        
-                        // Latest updates list for the client.
                         ScrollView {
                             if updatesViewModel.updates.isEmpty {
                                 Text("No updates yet.")
@@ -140,18 +130,15 @@ struct ClientView: View {
                                 }
                             }
                         }
-                        .scrollIndicators(.hidden)
                     }
                     .padding()
                 }
             }
-            // If you wish to allow adding updates for a client, you could add a sheet here.
         }
     }
 }
 
 #Preview {
-    // For preview purposes, create a dummy client.
     let dummyClient = AuthManager.DBUser(
         userId: "client123",
         firstName: "John",
