@@ -15,7 +15,7 @@ struct DayMealPlanCard: View {
                     .fontWeight(.semibold)
                     .padding(.bottom, 5)
                 ForEach(mealTypes, id: \.self) { type in
-                    MealRow(clientId: clientId, day: day, mealType: type, isCoach: isCoach)
+                    MealRow(clientId: clientId, day: day, mealSlot: type, isCoach: isCoach)
                 }
             }
             .padding()

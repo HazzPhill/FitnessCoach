@@ -2,12 +2,15 @@ import SwiftUI
 import FirebaseStorage
 import FirebaseFirestore
 import CachedAsyncImage
+import CoreHaptics
 
 struct ClientHome: View {
     let client: AuthManager.DBUser
     @EnvironmentObject var authManager: AuthManager
     @State private var showingAddUpdate = false  // Controls presentation of AddUpdateView
     @Namespace private var namespace
+    
+    @State private var engine: CHHapticEngine?
     
     // Compute weight entries.
     var weightEntries: [WeightEntry] {
@@ -76,6 +79,13 @@ struct ClientHome: View {
                             .foregroundStyle(.black)
                         WeightGraphView(weightEntries: weightEntries)
                         
+                        // New Daily Goals Grid Section
+                        Text("Daily Goals")
+                            .font(.title2)
+                            .fontWeight(.regular)
+                            .foregroundStyle(.black)
+                        DailyGoalsGridView(userId: client.userId)
+                        
                         Text("Your Plan")
                             .font(.title2)
                             .fontWeight(.regular)
@@ -83,7 +93,7 @@ struct ClientHome: View {
                         // Horizontal scroll with 7 day cards.
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 20) {
-                                ForEach(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], id: \.self) { day in
+                                ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { day in
                                     DayMealPlanCard(day: day,
                                                     clientId: client.userId,
                                                     isCoach: false)
@@ -111,6 +121,7 @@ struct ClientHome: View {
                                             .foregroundStyle(.white)
                                     )
                             }
+                            .sensoryFeedback(.impact(flexibility: .solid, intensity: 1), trigger: showingAddUpdate)
                         }
                         
                         ScrollView {
@@ -163,3 +174,4 @@ struct ClientHome: View {
     ClientHome(client: dummyClient)
         .environmentObject(AuthManager.shared)
 }
+

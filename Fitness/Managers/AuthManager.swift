@@ -23,6 +23,8 @@ class AuthManager: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
+    
+    
     private var userListener: ListenerRegistration?
     private var groupListener: ListenerRegistration?
     private var updatesListener: ListenerRegistration?
@@ -56,8 +58,19 @@ class AuthManager: ObservableObject {
         let name: String
         let weight: Double
         let imageUrl: String?
+        // New fields:
+        let biggestWin: String?
+        let issues: String?
+        let extraCoachRequest: String?
+        let caloriesScore: Double?
+        let stepsScore: Double?
+        let proteinScore: Double?
+        let trainingScore: Double?
+        let finalScore: Double?
         @ServerTimestamp var date: Date?
     }
+
+
     
     // MARK: - Initialisation
     
@@ -245,7 +258,7 @@ class AuthManager: ObservableObject {
     // MARK: - Update Functionality
     
     /// Adds a new update for the client with an optional image.
-    func addUpdate(name: String, weight: Double, image: UIImage?) async throws {
+    func addUpdate(name: String, weight: Double, image: UIImage?, biggestWin: String, issues: String, extraCoachRequest: String, finalScore: Double) async throws {
         guard let currentUser = currentUser else {
             throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
@@ -260,10 +273,15 @@ class AuthManager: ObservableObject {
             "name": name,
             "weight": weight,
             "imageUrl": imageUrl as Any,
+            "biggestWin": biggestWin,
+            "issues": issues,
+            "extraCoachRequest": extraCoachRequest,
+            "finalScore": finalScore,  // Store the computed final score
             "date": Timestamp(date: Date())
         ]
         _ = try await db.collection("updates").addDocument(data: updateData)
     }
+
     
     /// Helper method to upload an update image to Firebase Storage.
     private func uploadUpdateImage(image: UIImage) async throws -> URL? {

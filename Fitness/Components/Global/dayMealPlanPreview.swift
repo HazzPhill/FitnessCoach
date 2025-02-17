@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct dayMealPlanPreview: View {
-    var day: String = "Monday"
+    var day: String = "Mon"
     var meal: String
     var snack: String
     var isCoach: Bool = false
@@ -20,9 +20,9 @@ struct dayMealPlanPreview: View {
                 NavigationLink {
                     if isCoach {
                         // Use the clientId property instead of an undefined 'client'
-                        UploadMealPlanView(clientId: clientId, day: day, mealType: meal)
+                        UploadMealPlanView(clientId: clientId, day: day, mealSlot: meal)
                     } else {
-                        MealDetailsView()
+                        MealDetailsView(meal: nil, mealSlot: meal)
                             .navigationTransition(.zoom(sourceID: "zoommeal", in: mealviewtrans))
                     }
                 } label: {

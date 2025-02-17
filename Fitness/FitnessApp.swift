@@ -12,6 +12,8 @@ import Firebase
 @main
 struct FitnessApp: App {
     @StateObject private var authManager = AuthManager.shared
+    
+    
     init() {
         FirebaseApp.configure()
     }

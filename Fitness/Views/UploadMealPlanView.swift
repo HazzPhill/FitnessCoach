@@ -47,7 +47,6 @@ struct IngredientAccordionView: View {
                             .scaledToFit()
                             .frame(width: 24, height: 24)
                             .foregroundColor(Color("Warning"))
-                      
                             .background(Color.white.opacity(0.2))
                             .clipShape(Circle())
                     }
@@ -63,23 +62,20 @@ struct IngredientAccordionView: View {
                             }
                         }
                 }
-               
             }
         )
         .accentColor(.clear) // Hide the default arrow.
         .padding(.vertical, 5)
         .background(Color.white.opacity(0.1))
         .cornerRadius(8)
-
     }
 }
-
 
 // MARK: - UploadMealPlanView
 struct UploadMealPlanView: View {
     var clientId: String    // The client's ID for whom this meal is being uploaded.
     var day: String         // e.g. "Monday"
-    var mealType: String    // e.g. "Meal 1" or "Snack 1"
+    var mealSlot: String    // e.g. "Meal 1" or "Snack 1" (renamed from mealType)
     
     @State private var mealName: String = ""
     @State private var selectedImage: UIImage? = nil
@@ -144,7 +140,7 @@ struct UploadMealPlanView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Ingredients")
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(Color("SecondaryAccent"))
                                 .padding(.horizontal)
                             
                             ForEach(ingredients.indices, id: \.self) { index in
@@ -198,10 +194,10 @@ struct UploadMealPlanView: View {
                         ModernButton(label: "Upload Meal Plan") {
                             Task {
                                 do {
-                                    try await MealPlanManager.shared.uploadMealPlan(
+                                    try await MealPlanManager.shared.updateDailyMealPlan(
                                         clientId: clientId,
                                         day: day,
-                                        mealType: mealType,
+                                        mealSlot: mealSlot,   // This must exactly match the key used in Firestore.
                                         mealName: mealName,
                                         ingredients: ingredients,
                                         image: selectedImage
@@ -226,7 +222,7 @@ struct UploadMealPlanView: View {
                     .padding(.vertical)
                 }
             }
-            .navigationTitle("\(day) \(mealType) Plan")
+            .navigationTitle("\(day) – \(mealSlot) Plan")
         }
         .sheet(isPresented: $isImagePickerPresented) {
             ImagePicker(image: $selectedImage)
@@ -236,6 +232,6 @@ struct UploadMealPlanView: View {
 
 struct UploadMealPlanView_Previews: PreviewProvider {
     static var previews: some View {
-        UploadMealPlanView(clientId: "dummyClientId", day: "Monday", mealType: "Meal 1")
+        UploadMealPlanView(clientId: "dummyClientId", day: "Monday", mealSlot: "Meal 1")
     }
 }

@@ -13,3 +13,4 @@ struct MealPlan: Codable, Identifiable {
     let ingredients: [Ingredient]  // List of ingredients
     let timestamp: Date?
 }
+
