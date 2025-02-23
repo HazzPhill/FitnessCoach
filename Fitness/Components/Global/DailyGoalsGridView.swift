@@ -10,17 +10,21 @@ struct DailyGoalsGridView: View {
     }
     
     let columns = [
-        GridItem(.fixed(170), spacing: 16),
-        GridItem(.fixed(170), spacing: 16)
+        GridItem(.flexible(), spacing: 16),
+        GridItem(.flexible(), spacing: 16)
     ]
     
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 16) {
-            DailyGoalBox(label: "Calories", value: viewModel.dailyCalories.isEmpty ? "0" : viewModel.dailyCalories)
-            DailyGoalBox(label: "Steps", value: viewModel.dailySteps.isEmpty ? "0" : viewModel.dailySteps)
-            DailyGoalBox(label: "Protein", value: viewModel.dailyProtein.isEmpty ? "0" : viewModel.dailyProtein)
-            DailyGoalBox(label: "Training", value: viewModel.dailyTraining.isEmpty ? "0" : viewModel.dailyTraining)
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 16) {
+                DailyGoalBox(label: "Calories", value: viewModel.dailyCalories.isEmpty ? "0" : viewModel.dailyCalories, userId: userId)
+                DailyGoalBox(label: "Steps", value: viewModel.dailySteps.isEmpty ? "0" : viewModel.dailySteps, userId: userId)
+                DailyGoalBox(label: "Protein", value: viewModel.dailyProtein.isEmpty ? "0" : viewModel.dailyProtein, userId: userId)
+                DailyGoalBox(label: "Training", value: viewModel.dailyTraining.isEmpty ? "0" : viewModel.dailyTraining, userId: userId)
+            }
+            .padding(.horizontal, 0)          // Remove horizontal padding
         }
+        .edgesIgnoringSafeArea(.horizontal)   // Ignore safe area padding on sides
     }
 }
 

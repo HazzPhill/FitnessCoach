@@ -2,28 +2,26 @@ import SwiftUI
 import FirebaseStorage
 import FirebaseFirestore
 import CachedAsyncImage
+import CoreHaptics
 
-struct ClientView: View {
+struct ClientHome: View {
     let client: AuthManager.DBUser
-    @StateObject private var updatesViewModel: ClientUpdatesViewModel
+    @EnvironmentObject var authManager: AuthManager
+    @State private var showingAddUpdate = false  // For weekly check-ins
+    @State private var showingAddDailyCheckin = false // For daily check-ins
     @Namespace private var namespace
+    @Namespace private var updatezoom
 
-    // Compute weight entries for this client's updates.
+    @State private var engine: CHHapticEngine?
+
+    // Compute weight entries.
     var weightEntries: [WeightEntry] {
-        let calendar = Calendar.current
-        let currentYear = calendar.component(.year, from: Date())
-        return updatesViewModel.updates.compactMap { update in
-            if let date = update.date, calendar.component(.year, from: date) == currentYear {
+        authManager.yearlyUpdates
+            .compactMap { update in
+                guard let date = update.date else { return nil }
                 return WeightEntry(date: date, weight: update.weight)
             }
-            return nil
-        }
-        .sorted { $0.date < $1.date }
-    }
-    
-    init(client: AuthManager.DBUser) {
-        self.client = client
-        _updatesViewModel = StateObject(wrappedValue: ClientUpdatesViewModel(clientId: client.userId))
+            .sorted { $0.date < $1.date }
     }
     
     var body: some View {
@@ -35,16 +33,16 @@ struct ClientView: View {
                     VStack(alignment: .leading, spacing: 20) {
                         // Header Section
                         HStack {
-                            Text("\(client.firstName)'s Dashboard")
+                            Text("Welcome \(authManager.currentUser?.firstName ?? "")")
                                 .font(.title)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(Color("Accent"))
                             Spacer()
-                            if let profileImageUrl = client.profileImageUrl,
-                               let url = URL(string: profileImageUrl) {
-                                NavigationLink {
-                                    SettingsView()
-                                } label: {
+                            NavigationLink {
+                                SettingsView()
+                            } label: {
+                                if let profileImageUrl = authManager.currentUser?.profileImageUrl,
+                                   let url = URL(string: profileImageUrl) {
                                     CachedAsyncImage(url: url) { phase in
                                         switch phase {
                                         case .empty:
@@ -64,56 +62,80 @@ struct ClientView: View {
                                             EmptyView()
                                         }
                                     }
+                                } else {
+                                    Image(systemName: "person.circle")
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 45, height: 45)
+                                        .clipShape(Circle())
                                 }
-                            } else {
-                                Image(systemName: "person.circle")
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 45, height: 45)
-                                    .clipShape(Circle())
                             }
                         }
                         
-                        // Progress Section
-                        Text("Progress")
+                        Text("Your Progress")
                             .font(.title2)
                             .fontWeight(.regular)
                             .foregroundStyle(.black)
                         WeightGraphView(weightEntries: weightEntries)
                         
-                        // Plan Section: One horizontal scroll view with 7 cards.
-                        Text("Plan")
+                        // Daily Goals Grid Section
+                        Text("Daily Goals")
                             .font(.title2)
                             .fontWeight(.regular)
                             .foregroundStyle(.black)
+                        DailyGoalsGridView(userId: client.userId)
+                        
+                        Text("Your Plan")
+                            .font(.title2)
+                            .fontWeight(.regular)
+                            .foregroundStyle(.black)
+                        // Horizontal scroll with 7-day cards.
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 20) {
                                 ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { day in
                                     DayMealPlanCard(day: day,
                                                     clientId: client.userId,
-                                                    isCoach: true) // or set false if needed
-                                        .frame(width: 260)
+                                                    isCoach: false)
+                                    .simultaneousGesture(TapGesture().onEnded {
+                                        let generator = UIImpactFeedbackGenerator(style: .light)
+                                        generator.impactOccurred()
+                                    })
+                                    .frame(width: 260)
                                 }
                             }
                             .padding(.vertical)
                         }
                         .scrollIndicators(.hidden)
                         
-                        // Updates Section (unchanged)
+                        
+                        // Weekly Check-ins Section
                         HStack {
-                            Text("Updates")
+                            Text("Check-ins")
                                 .font(.title2)
                                 .fontWeight(.regular)
                                 .foregroundStyle(.black)
                             Spacer()
+                            Button {
+                                showingAddUpdate = true
+                            } label: {
+                                Circle()
+                                    .frame(width: 30, height: 30)
+                                    .foregroundStyle(Color("Accent"))
+                                    .overlay(
+                                        Image(systemName: "plus")
+                                            .foregroundStyle(.white)
+                                    )
+                            }
+                            .sensoryFeedback(.impact(flexibility: .solid, intensity: 1), trigger: showingAddUpdate)
                         }
+                        
                         ScrollView {
-                            if updatesViewModel.updates.isEmpty {
-                                Text("No updates yet.")
+                            if authManager.latestUpdates.isEmpty {
+                                Text("No check-ins yet.")
                                     .foregroundColor(.gray)
                                     .padding()
                             } else {
-                                ForEach(updatesViewModel.updates) { update in
+                                ForEach(authManager.latestUpdates) { update in
                                     NavigationLink {
                                         UpdateDetailView(update: update)
                                             .navigationTransition(.zoom(sourceID: update.id, in: namespace))
@@ -127,12 +149,37 @@ struct ClientView: View {
                                         .matchedTransitionSource(id: update.id, in: namespace)
                                     }
                                     .buttonStyle(.plain)
+                                    .simultaneousGesture(TapGesture().onEnded {
+                                        let generator = UIImpactFeedbackGenerator(style: .light)
+                                        generator.impactOccurred()
+                                    })
                                 }
                             }
                         }
+                        .scrollIndicators(.hidden)
+                        
+                        NavigationLink(destination: allUpdatesView()
+                                        .environmentObject(authManager)
+                                        .navigationTransition(.zoom(sourceID: "allUpdates", in: updatezoom))) {
+                            Text("View All")
+                                .frame(maxWidth: .infinity)
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color("White"))
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 24)
+                                .background(Color("Accent"))
+                                .clipShape(Capsule())
+                                .matchedTransitionSource(id: "allUpdates", in: updatezoom)
+                        }
+                        .padding(.horizontal)
                     }
                     .padding()
                 }
+            }
+            .sheet(isPresented: $showingAddUpdate) {
+                AddUpdateView()
+                    .environmentObject(authManager)
             }
         }
     }
@@ -149,6 +196,6 @@ struct ClientView: View {
         profileImageUrl: nil,
         createdAt: nil
     )
-    ClientView(client: dummyClient)
+    ClientHome(client: dummyClient)
         .environmentObject(AuthManager.shared)
 }

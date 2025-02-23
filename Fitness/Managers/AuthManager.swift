@@ -6,14 +6,13 @@ import FirebaseStorage
 import FirebaseCore
 import SwiftUI
 
-
 @MainActor
 class AuthManager: ObservableObject {
     static let shared = AuthManager()
     
     private let auth = Auth.auth()
     private let db = Firestore.firestore()
-    private let storage = Storage.storage() // For image uploads
+    private let storage = Storage.storage()
     
     private var cancellables = Set<AnyCancellable>()
     
@@ -23,7 +22,8 @@ class AuthManager: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    
+    @Published var yearlyUpdates: [Update] = []
+    private var yearlyUpdatesListener: ListenerRegistration?
     
     private var userListener: ListenerRegistration?
     private var groupListener: ListenerRegistration?
@@ -34,10 +34,10 @@ class AuthManager: ObservableObject {
     struct Group: Codable, Identifiable {
         @DocumentID var id: String?
         let name: String
-        let code: String // Must match Firestore field name
+        let code: String
         let coachId: String
         var members: [String]
-        var groupImageUrl: String?  // For group photo URL
+        var groupImageUrl: String?
         @ServerTimestamp var createdAt: Date?
     }
     
@@ -48,7 +48,7 @@ class AuthManager: ObservableObject {
         let email: String
         let role: UserRole
         var groupId: String?
-        var profileImageUrl: String?  // For profile picture URL
+        var profileImageUrl: String?
         @ServerTimestamp var createdAt: Date?
     }
     
@@ -58,7 +58,6 @@ class AuthManager: ObservableObject {
         let name: String
         let weight: Double
         let imageUrl: String?
-        // New fields:
         let biggestWin: String?
         let issues: String?
         let extraCoachRequest: String?
@@ -69,8 +68,6 @@ class AuthManager: ObservableObject {
         let finalScore: Double?
         @ServerTimestamp var date: Date?
     }
-
-
     
     // MARK: - Initialisation
     
@@ -78,11 +75,13 @@ class AuthManager: ObservableObject {
         auth.addStateDidChangeListener { [weak self] _, user in
             if let user = user {
                 self?.setupListeners(uid: user.uid)
-                self?.setupUpdatesListener() // Start realtime listening for updates
+                self?.setupUpdatesListener()
+                self?.setupYearlyUpdatesListener()
             } else {
                 self?.currentUser = nil
                 self?.currentGroup = nil
                 self?.latestUpdates = []
+                self?.yearlyUpdates = []
             }
         }
     }
@@ -134,7 +133,31 @@ class AuthManager: ObservableObject {
         }
     }
     
-    /// Allows a user to join a group using its code.
+    func setupYearlyUpdatesListener() {
+        let calendar = Calendar.current
+        let now = Date()
+        guard let startOfYear = calendar.date(from: calendar.dateComponents([.year], from: now)),
+              let endOfYear = calendar.date(byAdding: .year, value: 1, to: startOfYear) else {
+            return
+        }
+        
+        yearlyUpdatesListener = db.collection("updates")
+            .whereField("date", isGreaterThanOrEqualTo: startOfYear)
+            .whereField("date", isLessThan: endOfYear)
+            .order(by: "date", descending: false)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self, let snapshot = snapshot else { return }
+                do {
+                    let updates = try snapshot.documents.compactMap { try $0.data(as: Update.self) }
+                    DispatchQueue.main.async {
+                        self.yearlyUpdates = updates
+                    }
+                } catch {
+                    print("Error decoding yearly updates: \(error)")
+                }
+            }
+    }
+    
     func joinGroup(code: String) async throws {
         guard let user = auth.currentUser else {
             throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
@@ -196,9 +219,6 @@ class AuthManager: ObservableObject {
             createdAt: Date()
         )
     }
-
-    
-    // MARK: - Firestore Operations
     
     private func createDBUser(user: DBUser) async throws {
         let document = db.collection("users").document(user.userId)
@@ -235,7 +255,6 @@ class AuthManager: ObservableObject {
             }
     }
     
-    /// Sets up a realtime listener for the latest 5 updates.
     func setupUpdatesListener() {
         updatesListener = db.collection("updates")
             .order(by: "date", descending: true)
@@ -255,9 +274,6 @@ class AuthManager: ObservableObject {
             }
     }
     
-    // MARK: - Update Functionality
-    
-    /// Adds a new update for the client with an optional image.
     func addUpdate(name: String, weight: Double, image: UIImage?, biggestWin: String, issues: String, extraCoachRequest: String, finalScore: Double) async throws {
         guard let currentUser = currentUser else {
             throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
@@ -276,14 +292,12 @@ class AuthManager: ObservableObject {
             "biggestWin": biggestWin,
             "issues": issues,
             "extraCoachRequest": extraCoachRequest,
-            "finalScore": finalScore,  // Store the computed final score
+            "finalScore": finalScore,
             "date": Timestamp(date: Date())
         ]
         _ = try await db.collection("updates").addDocument(data: updateData)
     }
-
     
-    /// Helper method to upload an update image to Firebase Storage.
     private func uploadUpdateImage(image: UIImage) async throws -> URL? {
         guard let imageData = image.jpegData(compressionQuality: 0.8) else { return nil }
         let fileName = UUID().uuidString + ".jpg"
@@ -295,7 +309,6 @@ class AuthManager: ObservableObject {
         return url
     }
     
-    /// Updates the group's photo by uploading the image and updating Firestore.
     func updateGroupPhoto(image: UIImage) async throws {
         guard let groupId = currentGroup?.id else { return }
         guard let imageData = image.jpegData(compressionQuality: 0.8) else { return }
@@ -310,7 +323,6 @@ class AuthManager: ObservableObject {
         ])
     }
     
-    /// Updates the user's profile picture by uploading the image and updating Firestore.
     func updateProfilePicture(image: UIImage) async throws {
         guard let currentUser = currentUser else { return }
         guard let imageData = image.jpegData(compressionQuality: 0.8) else { return }
@@ -325,6 +337,74 @@ class AuthManager: ObservableObject {
         ])
         self.currentUser = try await db.collection("users").document(currentUser.userId).getDocument(as: DBUser.self)
     }
+    
+    // MARK: - Daily Checkins Operations
+    
+    func uploadDailyCheckinImage(image: UIImage) async throws -> URL? {
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else { return nil }
+        let fileName = "dailyCheckins/\(UUID().uuidString).jpg"
+        let storageRef = storage.reference().child(fileName)
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+        _ = try await storageRef.putDataAsync(imageData, metadata: metadata)
+        let url = try await storageRef.downloadURL()
+        return url
+    }
+    
+    func addDailyCheckin(data: [String: Any]) async throws {
+        _ = try await db.collection("dailyCheckins").addDocument(data: data)
+    }
+    
+    func updateDailyCheckin(documentID: String, data: [String: Any]) async throws {
+        try await db.collection("dailyCheckins").document(documentID).setData(data, merge: true)
+    }
+    
+    func deleteDailyCheckin(documentID: String) async throws {
+        try await db.collection("dailyCheckins").document(documentID).delete()
+    }
+    
+    func scheduleWeeklyNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Weekly Checkin"
+        content.body = "Have you done your weekly checkin?"
+        content.sound = .default
+
+        var dateComponents = DateComponents()
+        dateComponents.weekday = 1  // Sunday
+        dateComponents.hour = 9     // 9 AM (adjust if you want a different time)
+        dateComponents.minute = 0
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: "weeklyCheckin", content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling weekly notification: \(error)")
+            }
+        }
+    }
+
+    func scheduleDailyNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Daily Checkin"
+        content.body = "Have you done your daily checkin?"
+        content.sound = .default
+
+        var dateComponents = DateComponents()
+        dateComponents.hour = 20  // 8 PM
+        dateComponents.minute = 0
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: "dailyCheckin", content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling daily notification: \(error)")
+            }
+        }
+    }
+    
+    
     
     // MARK: - Helper Methods
     
@@ -357,9 +437,14 @@ class AuthManager: ObservableObject {
 }
 
 extension AuthManager {
-    /// Sends a password reset email.
     func sendPasswordReset(email: String) async throws {
         try await auth.sendPasswordReset(withEmail: email)
+    }
+}
+
+extension String {
+    func capitalisedFirstLetter() -> String {
+        return prefix(1).uppercased() + dropFirst()
     }
 }
 

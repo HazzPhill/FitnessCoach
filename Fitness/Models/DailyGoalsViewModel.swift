@@ -7,6 +7,7 @@ class DailyGoalsViewModel: ObservableObject {
     @Published var dailySteps: String = ""
     @Published var dailyProtein: String = ""
     @Published var dailyTraining: String = ""
+    @State private var goalsViewModel: DailyGoalsViewModel?
     
     private let db = Firestore.firestore()
     private var listener: ListenerRegistration?

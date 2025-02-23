@@ -28,7 +28,6 @@ struct ClientListView: View {
                 }
             }
             .padding(.vertical)
-            .padding(.horizontal)
         }
     }
 }

@@ -2,27 +2,28 @@ import SwiftUI
 import FirebaseStorage
 import FirebaseFirestore
 import CachedAsyncImage
-import CoreHaptics
 
-struct ClientHome: View {
+struct ClientView: View {
     let client: AuthManager.DBUser
-    @EnvironmentObject var authManager: AuthManager
-    @State private var showingAddUpdate = false  // Controls presentation of AddUpdateView
+    @StateObject private var updatesViewModel: ClientUpdatesViewModel
     @Namespace private var namespace
-    
-    @State private var engine: CHHapticEngine?
-    
-    // Compute weight entries.
+
+    // Compute weight entries for this client's updates.
     var weightEntries: [WeightEntry] {
         let calendar = Calendar.current
         let currentYear = calendar.component(.year, from: Date())
-        return authManager.latestUpdates.compactMap { update in
+        return updatesViewModel.updates.compactMap { update in
             if let date = update.date, calendar.component(.year, from: date) == currentYear {
                 return WeightEntry(date: date, weight: update.weight)
             }
             return nil
         }
         .sorted { $0.date < $1.date }
+    }
+    
+    init(client: AuthManager.DBUser) {
+        self.client = client
+        _updatesViewModel = StateObject(wrappedValue: ClientUpdatesViewModel(clientId: client.userId))
     }
     
     var body: some View {
@@ -34,16 +35,16 @@ struct ClientHome: View {
                     VStack(alignment: .leading, spacing: 20) {
                         // Header Section
                         HStack {
-                            Text("Welcome \(authManager.currentUser?.firstName ?? "")")
+                            Text("\(client.firstName)'s Dashboard")
                                 .font(.title)
                                 .fontWeight(.semibold)
                                 .foregroundStyle(Color("Accent"))
                             Spacer()
-                            NavigationLink {
-                                SettingsView()
-                            } label: {
-                                if let profileImageUrl = authManager.currentUser?.profileImageUrl,
-                                   let url = URL(string: profileImageUrl) {
+                            if let profileImageUrl = client.profileImageUrl,
+                               let url = URL(string: profileImageUrl) {
+                                NavigationLink {
+                                    SettingsView()
+                                } label: {
                                     CachedAsyncImage(url: url) { phase in
                                         switch phase {
                                         case .empty:
@@ -63,40 +64,34 @@ struct ClientHome: View {
                                             EmptyView()
                                         }
                                     }
-                                } else {
-                                    Image(systemName: "person.circle")
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: 45, height: 45)
-                                        .clipShape(Circle())
                                 }
+                            } else {
+                                Image(systemName: "person.circle")
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 45, height: 45)
+                                    .clipShape(Circle())
                             }
                         }
                         
-                        Text("Your Progress")
+                        // Progress Section
+                        Text("Progress")
                             .font(.title2)
                             .fontWeight(.regular)
                             .foregroundStyle(.black)
                         WeightGraphView(weightEntries: weightEntries)
                         
-                        // New Daily Goals Grid Section
-                        Text("Daily Goals")
+                        // Plan Section: One horizontal scroll view with 7 cards.
+                        Text("Plan")
                             .font(.title2)
                             .fontWeight(.regular)
                             .foregroundStyle(.black)
-                        DailyGoalsGridView(userId: client.userId)
-                        
-                        Text("Your Plan")
-                            .font(.title2)
-                            .fontWeight(.regular)
-                            .foregroundStyle(.black)
-                        // Horizontal scroll with 7 day cards.
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 20) {
                                 ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { day in
                                     DayMealPlanCard(day: day,
                                                     clientId: client.userId,
-                                                    isCoach: false)
+                                                    isCoach: true) // or set false if needed
                                         .frame(width: 260)
                                 }
                             }
@@ -104,33 +99,21 @@ struct ClientHome: View {
                         }
                         .scrollIndicators(.hidden)
                         
+                        // Updates Section (unchanged)
                         HStack {
-                            Text("Updates")
+                            Text("Check-ins")
                                 .font(.title2)
                                 .fontWeight(.regular)
                                 .foregroundStyle(.black)
                             Spacer()
-                            Button {
-                                showingAddUpdate = true
-                            } label: {
-                                Circle()
-                                    .frame(width: 30, height: 30)
-                                    .foregroundStyle(Color("Accent"))
-                                    .overlay(
-                                        Image(systemName: "plus")
-                                            .foregroundStyle(.white)
-                                    )
-                            }
-                            .sensoryFeedback(.impact(flexibility: .solid, intensity: 1), trigger: showingAddUpdate)
                         }
-                        
                         ScrollView {
-                            if authManager.latestUpdates.isEmpty {
-                                Text("No updates yet.")
+                            if updatesViewModel.updates.isEmpty {
+                                Text("No Check-ins yet.")
                                     .foregroundColor(.gray)
                                     .padding()
                             } else {
-                                ForEach(authManager.latestUpdates) { update in
+                                ForEach(updatesViewModel.updates) { update in
                                     NavigationLink {
                                         UpdateDetailView(update: update)
                                             .navigationTransition(.zoom(sourceID: update.id, in: namespace))
@@ -147,14 +130,9 @@ struct ClientHome: View {
                                 }
                             }
                         }
-                        .scrollIndicators(.hidden)
                     }
                     .padding()
                 }
-            }
-            .sheet(isPresented: $showingAddUpdate) {
-                AddUpdateView()
-                    .environmentObject(authManager)
             }
         }
     }
@@ -171,7 +149,6 @@ struct ClientHome: View {
         profileImageUrl: nil,
         createdAt: nil
     )
-    ClientHome(client: dummyClient)
+    ClientView(client: dummyClient)
         .environmentObject(AuthManager.shared)
 }
-

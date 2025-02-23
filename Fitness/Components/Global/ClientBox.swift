@@ -13,16 +13,42 @@ struct ClientBox: View {
     
     var body: some View {
         VStack(alignment: .leading) {
-            // Top row: Client name and an image
+            // Top row: Client name and the profile picture
             HStack {
                 Text(clientName)
                     .font(.system(size: 16, weight: .regular))
                     .foregroundColor(.black)
                 Spacer()
-                Image("gym_background")
-                    .resizable()
-                    .frame(width: 34, height: 34)
-                    .clipShape(Circle())
+                if let urlString = viewModel.clientProfileImageUrl,
+                   let url = URL(string: urlString) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .empty:
+                            ProgressView()
+                                .frame(width: 34, height: 34)
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 34, height: 34)
+                                .clipShape(Circle())
+                        case .failure(_):
+                            Image(systemName: "person.circle")
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 34, height: 34)
+                                .clipShape(Circle())
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                } else {
+                    Image(systemName: "person.circle")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 34, height: 34)
+                        .clipShape(Circle())
+                }
             }
             // Bottom row: Last update info
             HStack {
@@ -72,7 +98,6 @@ struct ClientBox: View {
 
 struct ClientBox_Previews: PreviewProvider {
     static var previews: some View {
-        // Preview with dummy values; note that in preview mode the listener won’t fetch real data.
         ClientBox(clientName: "Harry P", clientId: "dummyClientId")
             .previewLayout(.sizeThatFits)
     }
