@@ -6,24 +6,18 @@ import CachedAsyncImage
 struct ClientView: View {
     let client: AuthManager.DBUser
     @StateObject private var updatesViewModel: ClientUpdatesViewModel
+    @StateObject private var goalsViewModel: DailyGoalsViewModel
+    @StateObject private var checkinsViewModel: ClientDailyCheckinsViewModel
+    @StateObject private var weightViewModel: WeightEntriesViewModel
     @Namespace private var namespace
+    @Namespace private var checkinNamespace
 
-    // Compute weight entries for this client's updates.
-    var weightEntries: [WeightEntry] {
-        let calendar = Calendar.current
-        let currentYear = calendar.component(.year, from: Date())
-        return updatesViewModel.updates.compactMap { update in
-            if let date = update.date, calendar.component(.year, from: date) == currentYear {
-                return WeightEntry(date: date, weight: update.weight)
-            }
-            return nil
-        }
-        .sorted { $0.date < $1.date }
-    }
-    
     init(client: AuthManager.DBUser) {
         self.client = client
         _updatesViewModel = StateObject(wrappedValue: ClientUpdatesViewModel(clientId: client.userId))
+        _goalsViewModel = StateObject(wrappedValue: DailyGoalsViewModel(userId: client.userId))
+        _checkinsViewModel = StateObject(wrappedValue: ClientDailyCheckinsViewModel(clientId: client.userId))
+        _weightViewModel = StateObject(wrappedValue: WeightEntriesViewModel(userId: client.userId))
     }
     
     var body: some View {
@@ -74,12 +68,38 @@ struct ClientView: View {
                             }
                         }
                         
-                        // Progress Section
+                        // Weekly Goals Section
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Weekly Goals")
+                                .font(.title2)
+                                .fontWeight(.regular)
+                                .foregroundStyle(.black)
+                            
+                            // Goals grid display
+                            LazyVGrid(columns: [
+                                GridItem(.flexible(), spacing: 16),
+                                GridItem(.flexible(), spacing: 16)
+                            ], spacing: 16) {
+                                // Calories goal
+                                goalCard(title: "Calories", value: goalsViewModel.dailyCalories)
+                                
+                                // Steps goal
+                                goalCard(title: "Steps", value: goalsViewModel.dailySteps)
+                                
+                                // Protein goal
+                                goalCard(title: "Protein", value: goalsViewModel.dailyProtein)
+                                
+                                // Training goal
+                                goalCard(title: "Training", value: goalsViewModel.dailyTraining)
+                            }
+                        }
+                        
+                        // Progress Section - Now using the complete weight history
                         Text("Progress")
                             .font(.title2)
                             .fontWeight(.regular)
                             .foregroundStyle(.black)
-                        WeightGraphView(weightEntries: weightEntries)
+                        WeightGraphView(weightEntries: weightViewModel.weightEntries)
                         
                         // Plan Section: One horizontal scroll view with 7 cards.
                         Text("Plan")
@@ -91,7 +111,7 @@ struct ClientView: View {
                                 ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { day in
                                     DayMealPlanCard(day: day,
                                                     clientId: client.userId,
-                                                    isCoach: true) // or set false if needed
+                                                    isCoach: true)
                                         .frame(width: 260)
                                 }
                             }
@@ -99,9 +119,38 @@ struct ClientView: View {
                         }
                         .scrollIndicators(.hidden)
                         
-                        // Updates Section (unchanged)
+                        // Daily Check-ins Section
                         HStack {
-                            Text("Check-ins")
+                            Text("Daily Check-ins")
+                                .font(.title2)
+                                .fontWeight(.regular)
+                                .foregroundStyle(.black)
+                            Spacer()
+                        }
+                        
+                        LazyVStack(spacing: 16) {
+                            if checkinsViewModel.checkins.isEmpty {
+                                Text("No daily check-ins yet.")
+                                    .foregroundColor(.gray)
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                            } else {
+                                ForEach(checkinsViewModel.checkins) { checkin in
+                                    NavigationLink {
+                                        DailyCheckinDetailView(checkin: checkin)
+                                            .navigationTransition(.zoom(sourceID: checkin.id ?? "", in: checkinNamespace))
+                                    } label: {
+                                        DailyCheckinPreview(checkin: checkin)
+                                            .matchedTransitionSource(id: checkin.id ?? "", in: checkinNamespace)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        
+                        // Updates Section
+                        HStack {
+                            Text("Weekly Check-ins")
                                 .font(.title2)
                                 .fontWeight(.regular)
                                 .foregroundStyle(.black)
@@ -109,7 +158,7 @@ struct ClientView: View {
                         }
                         ScrollView {
                             if updatesViewModel.updates.isEmpty {
-                                Text("No Check-ins yet.")
+                                Text("No weekly check-ins yet.")
                                     .foregroundColor(.gray)
                                     .padding()
                             } else {
@@ -134,21 +183,33 @@ struct ClientView: View {
                     .padding()
                 }
             }
+            .onAppear {
+                // Refresh weight entries when view appears to make sure we have the most current data
+                weightViewModel.fetchAllWeightEntries(userId: client.userId)
+            }
         }
     }
-}
-
-#Preview {
-    let dummyClient = AuthManager.DBUser(
-        userId: "client123",
-        firstName: "John",
-        lastName: "Doe",
-        email: "john.doe@example.com",
-        role: .client,
-        groupId: "group123",
-        profileImageUrl: nil,
-        createdAt: nil
-    )
-    ClientView(client: dummyClient)
-        .environmentObject(AuthManager.shared)
+    
+    // Helper function to create a goal card
+    private func goalCard(title: String, value: String) -> some View {
+        VStack(alignment: .leading) {
+            Text(title)
+                .font(.headline)
+                .foregroundColor(Color("SecondaryAccent"))
+            
+            Text(value.isEmpty ? "Not set" : value)
+                .font(.title3)
+                .foregroundColor(.black)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color.white)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color("BoxStroke"), lineWidth: 1)
+        )
+    }
 }

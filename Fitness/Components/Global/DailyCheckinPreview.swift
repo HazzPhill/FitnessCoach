@@ -33,6 +33,14 @@ struct DailyCheckinPreview: View {
         return formatter.string(from: date)
     }
     
+    // Helper function to get the day name
+    private func formattedDay(from date: Date?) -> String {
+        guard let date = date else { return "No date" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE" // Full day name (e.g., "Monday")
+        return formatter.string(from: date)
+    }
+    
     var body: some View {
         HStack {
             // Left side: First image or placeholder
@@ -72,7 +80,7 @@ struct DailyCheckinPreview: View {
             // Right side: Info
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Daily Check-in")
+                    Text(formattedDay(from: checkin.date))
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.black)
                     Spacer()

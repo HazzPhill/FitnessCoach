@@ -3,7 +3,15 @@ import CachedAsyncImage
 
 struct UpdateDetailView: View {
     let update: AuthManager.Update
+    @State private var showingEditSheet = false
+    @State private var showDeleteAlert = false
+    @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
+    
+    // Check if current user is the owner of this update
+    private var isOwner: Bool {
+        return authManager.currentUser?.userId == update.userId
+    }
     
     private var weightDeltaText: String {
         guard let _ = update.date else { return "N/A" }
@@ -73,7 +81,7 @@ struct UpdateDetailView: View {
                 }
                 .ignoresSafeArea(edges: .top)
                 
-                // Title & Date
+                // Title & Date with conditional edit/delete buttons
                 HStack {
                     Text(update.name)
                         .font(.title2)
@@ -82,10 +90,33 @@ struct UpdateDetailView: View {
                     
                     Spacer()
                     
-                    if let date = update.date {
-                        Text(date.formattedWithOrdinal())
-                            .font(.footnote)
-                            .foregroundColor(Color("SecondaryAccent"))
+                    HStack(spacing: 8) {
+                        if let date = update.date {
+                            Text(date.formattedWithOrdinal())
+                                .font(.footnote)
+                                .foregroundColor(Color("SecondaryAccent"))
+                        }
+                        
+                        // Only show edit/delete for the owner
+                        if isOwner {
+                            // Edit button
+                            Button {
+                                showingEditSheet = true
+                            } label: {
+                                Image(systemName: "pencil.circle.fill")
+                                    .font(.title3)
+                                    .foregroundColor(Color("Accent"))
+                            }
+                            
+                            // Delete button
+                            Button {
+                                showDeleteAlert = true
+                            } label: {
+                                Image(systemName: "trash.circle.fill")
+                                    .font(.title3)
+                                    .foregroundColor(Color("Warning"))
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal)
@@ -146,12 +177,43 @@ struct UpdateDetailView: View {
         .ignoresSafeArea(edges: .top)
         .background(Color("Background").ignoresSafeArea())
         .navigationBarHidden(true)
+        .sheet(isPresented: $showingEditSheet) {
+            EditUpdateView(update: update)
+                .environmentObject(authManager)
+        }
+        .alert("Delete Check-in", isPresented: $showDeleteAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                deleteUpdate()
+            }
+        } message: {
+            Text("Are you sure you want to delete this weekly check-in? This action cannot be undone.")
+        }
+    }
+    
+    // Function to delete the update
+    private func deleteUpdate() {
+        guard let updateId = update.id else {
+            print("Error: No update ID found")
+            return
+        }
+        
+        Task {
+            do {
+                try await authManager.deleteUpdate(updateId: updateId)
+                
+                // Return to previous screen
+                DispatchQueue.main.async {
+                    dismiss()
+                }
+            } catch {
+                print("Error deleting update: \(error.localizedDescription)")
+            }
+        }
     }
 }
 
-// MARK: - Subviews
-
-/// A simple info box for weight or difference.
+// Supporting structs and extensions remain the same...
 struct InfoBoxView: View {
     let title: String
     let value: String
@@ -178,7 +240,6 @@ struct InfoBoxView: View {
     }
 }
 
-/// A box listing the 4 individual scores + total.
 struct ScoresBoxView: View {
     let calories: Double
     let protein: Double
@@ -229,7 +290,6 @@ struct ScoresBoxView: View {
     }
 }
 
-/// A box for reflection answers like biggest win, issues, etc.
 struct ReflectionBoxView: View {
     let title: String
     let text: String
@@ -254,8 +314,6 @@ struct ReflectionBoxView: View {
         )
     }
 }
-
-// MARK: - Date Formatting
 
 extension Date {
     func formattedWithOrdinal() -> String {

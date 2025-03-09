@@ -10,24 +10,18 @@ struct ClientHome: View {
     @State private var showingAddUpdate = false  // For weekly check-ins
     @State private var showingAddDailyCheckin = false // For daily check-ins
     @State private var refreshDailyCheckins = false // Trigger for refreshing daily check-ins
+    @StateObject private var weightViewModel: WeightEntriesViewModel
     @Namespace private var namespace
     @Namespace private var updatezoom
     @Namespace private var checkinNamespace
 
     @State private var engine: CHHapticEngine?
-
-    // Compute weight entries.
-    var weightEntries: [WeightEntry] {
-        let calendar = Calendar.current
-        let currentYear = calendar.component(.year, from: Date())
-        return authManager.latestUpdates.compactMap { update in
-            if let date = update.date, calendar.component(.year, from: date) == currentYear {
-                return WeightEntry(date: date, weight: update.weight)
-            }
-            return nil
+    
+    // Initialize the weight view model with the current user's ID
+        init(client: AuthManager.DBUser) {
+            self.client = client
+            _weightViewModel = StateObject(wrappedValue: WeightEntriesViewModel(userId: client.userId))
         }
-        .sorted { $0.date < $1.date }
-    }
     
     var body: some View {
         NavigationStack {
@@ -81,7 +75,8 @@ struct ClientHome: View {
                             .font(.title2)
                             .fontWeight(.regular)
                             .foregroundStyle(.black)
-                        WeightGraphView(weightEntries: weightEntries)
+                        
+                        WeightGraphView(weightEntries: weightViewModel.weightEntries)
                         
                         // Daily Goals Grid Section
                         Text("Daily Goals")

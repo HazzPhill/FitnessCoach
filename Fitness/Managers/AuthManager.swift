@@ -163,6 +163,61 @@ class AuthManager: ObservableObject {
             }
     }
     
+    // Schedule the weekly cleanup of check-ins
+    func scheduleWeeklyCheckinCleanup() {
+        // First, perform an immediate cleanup if needed
+        cleanupDailyCheckins()
+        
+        // Set up a timer to check daily if cleanup is needed
+        // We check daily rather than setting a timer for exactly next Monday
+        // as the app may not be running at the scheduled time
+        Timer.scheduledTimer(withTimeInterval: 24 * 60 * 60, repeats: true) { [weak self] _ in
+            self?.cleanupDailyCheckins()
+        }
+    }
+
+    // Clean up daily check-ins if today is Monday
+    func cleanupDailyCheckins() {
+        let calendar = Calendar.current
+        let today = Date()
+        let weekday = calendar.component(.weekday, from: today)
+        
+        // If today is Monday (weekday == 2 in Calendar.current), delete old check-ins
+        if weekday == 2 {
+            Task {
+                await cleanupOldCheckins()
+            }
+        }
+    }
+
+    // Perform the actual deletion of check-ins
+    func cleanupOldCheckins() async {
+        guard let userId = currentUser?.userId else { return }
+        
+        do {
+            // Get all check-ins older than today
+            let calendar = Calendar.current
+            let startOfToday = calendar.startOfDay(for: Date())
+            
+            let snapshot = try await db.collection("daily_checkins")
+                .whereField("userId", isEqualTo: userId)
+                .whereField("date", isLessThan: startOfToday)
+                .getDocuments()
+            
+            // Delete each check-in
+            for document in snapshot.documents {
+                try await db.collection("daily_checkins").document(document.documentID).delete()
+                print("Deleted old check-in: \(document.documentID)")
+            }
+            
+            // Refresh the local cache after deletion
+            refreshDailyCheckins()
+            print("Completed weekly cleanup of daily check-ins")
+        } catch {
+            print("Error cleaning up daily check-ins: \(error.localizedDescription)")
+        }
+    }
+    
     // Replace this function in your AuthManager
     func setupDailyCheckinsListener(uid: String) {
         // Clean up existing listener if there is one
@@ -418,15 +473,148 @@ class AuthManager: ObservableObject {
     }
     
     func addDailyCheckin(data: [String: Any]) async throws {
-        _ = try await db.collection("dailyCheckins").addDocument(data: data)
+        _ = try await db.collection("daily_Checkins").addDocument(data: data)
     }
     
     func updateDailyCheckin(documentID: String, data: [String: Any]) async throws {
-        try await db.collection("dailyCheckins").document(documentID).setData(data, merge: true)
+        try await db.collection("daily_Checkins").document(documentID).setData(data, merge: true)
     }
     
     func deleteDailyCheckin(documentID: String) async throws {
-        try await db.collection("dailyCheckins").document(documentID).delete()
+        try await db.collection("daily_checkins").document(documentID).delete()
+    }
+    
+    // Improved update method with debugging
+    func updateUpdate(
+        updateId: String,
+        name: String,
+        weight: Double,
+        newImage: UIImage?,
+        existingImageUrl: String?,
+        biggestWin: String,
+        issues: String,
+        extraCoachRequest: String,
+        caloriesScore: Double,
+        stepsScore: Double,
+        proteinScore: Double,
+        trainingScore: Double,
+        finalScore: Double
+    ) async throws {
+        guard let currentUser = currentUser else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+        
+        print("🔄 Starting update for document ID: \(updateId)")
+        
+        var imageUrl: String? = existingImageUrl
+        
+        // If we have a new image, upload it
+        if let newImage = newImage {
+            print("📸 Uploading new image...")
+            if let url = try await uploadUpdateImage(image: newImage) {
+                imageUrl = url.absoluteString
+                print("✅ Image uploaded, URL: \(imageUrl ?? "nil")")
+            } else {
+                print("⚠️ Image upload returned nil URL")
+            }
+        } else {
+            print("ℹ️ Using existing image URL: \(imageUrl ?? "nil")")
+        }
+        
+        // Update data for the document
+        let updateData: [String: Any] = [
+            "userId": currentUser.userId,
+            "name": name,
+            "weight": weight,
+            "imageUrl": imageUrl as Any,
+            "biggestWin": biggestWin,
+            "issues": issues,
+            "extraCoachRequest": extraCoachRequest,
+            "caloriesScore": caloriesScore,
+            "stepsScore": stepsScore,
+            "proteinScore": proteinScore,
+            "trainingScore": trainingScore,
+            "finalScore": finalScore
+        ]
+        
+        print("📝 Update data prepared: \(updateData)")
+        
+        // First verify the document exists and the current user owns it
+        do {
+            let doc = try await db.collection("updates").document(updateId).getDocument()
+            
+            if !doc.exists {
+                print("❌ Document does not exist: \(updateId)")
+                throw NSError(domain: "Firestore", code: -1, userInfo: [NSLocalizedDescriptionKey: "Update not found"])
+            }
+            
+            guard let docData = doc.data(), let docUserId = docData["userId"] as? String else {
+                print("❌ Document data missing userId field")
+                throw NSError(domain: "Firestore", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid document data"])
+            }
+            
+            if docUserId != currentUser.userId {
+                print("⛔ Permission denied - document userId: \(docUserId) does not match current user: \(currentUser.userId)")
+                throw NSError(domain: "Firestore", code: -1, userInfo: [NSLocalizedDescriptionKey: "You do not have permission to update this record"])
+            }
+            
+            print("✅ Document exists and user has permission to update it")
+            
+            // Try either updateData or setData
+            do {
+                print("📤 Attempting updateData...")
+                try await db.collection("updates").document(updateId).updateData(updateData)
+                print("✅ Document updated successfully")
+            } catch let updateError {
+                print("⚠️ updateData failed: \(updateError.localizedDescription), trying setData...")
+                
+                // If updateData fails, try setData with merge
+                do {
+                    try await db.collection("updates").document(updateId).setData(updateData, merge: true)
+                    print("✅ Document updated successfully using setData with merge")
+                } catch let setError {
+                    print("❌ setData also failed: \(setError.localizedDescription)")
+                    
+                    // Check your Firebase security rules!
+                    print("🔒 IMPORTANT: Verify your Firebase security rules allow updates to the 'updates' collection!")
+                    print("🔒 Current rule may be set to: allow update, delete: if false;")
+                    print("🔒 Change to: allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;")
+                    
+                    throw setError
+                }
+            }
+            
+            // Refresh the updates to show the changes
+            print("🔄 Refreshing updates list...")
+            setupUpdatesListener()
+            setupYearlyUpdatesListener()
+            print("✅ Update complete")
+            
+        } catch {
+            print("❌ Error during update process: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    func deleteUpdate(updateId: String) async throws {
+        guard let currentUser = currentUser else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+        
+        // Get the update document to check ownership
+        let document = try await db.collection("updates").document(updateId).getDocument()
+        
+        // Verify the current user owns this update
+        guard let userId = document.data()?["userId"] as? String, userId == currentUser.userId else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "You don't have permission to delete this update"])
+        }
+        
+        // Delete the update document
+        try await db.collection("updates").document(updateId).delete()
+        
+        // Refresh the updates
+        setupUpdatesListener()
+        setupYearlyUpdatesListener() // Also refresh the yearly updates since this might affect them
     }
     
     func scheduleWeeklyNotification() {
@@ -517,3 +705,4 @@ extension String {
 enum UserRole: String, Codable, CaseIterable {
     case coach, client
 }
+
