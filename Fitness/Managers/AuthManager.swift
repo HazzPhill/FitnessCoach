@@ -22,6 +22,9 @@ class AuthManager: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
+    @Published var dailyCheckins: [DailyCheckin] = []
+    private var dailyCheckinsListener: ListenerRegistration?
+    
     @Published var yearlyUpdates: [Update] = []
     private var yearlyUpdatesListener: ListenerRegistration?
     
@@ -77,11 +80,13 @@ class AuthManager: ObservableObject {
                 self?.setupListeners(uid: user.uid)
                 self?.setupUpdatesListener()
                 self?.setupYearlyUpdatesListener()
+                self?.setupDailyCheckinsListener(uid: user.uid)
             } else {
                 self?.currentUser = nil
                 self?.currentGroup = nil
                 self?.latestUpdates = []
                 self?.yearlyUpdates = []
+                self?.dailyCheckins = []
             }
         }
     }
@@ -158,6 +163,66 @@ class AuthManager: ObservableObject {
             }
     }
     
+    // Replace this function in your AuthManager
+    func setupDailyCheckinsListener(uid: String) {
+        // Clean up existing listener if there is one
+        dailyCheckinsListener?.remove()
+        
+        // Set up a new listener
+        dailyCheckinsListener = db.collection("daily_checkins")
+            .whereField("userId", isEqualTo: uid)
+            .order(by: "date", descending: true)
+            .limit(to: 10)  // Increased from 5 to show more check-ins
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
+                
+                if let error = error {
+                    print("Error fetching daily check-ins: \(error.localizedDescription)")
+                    return
+                }
+                
+                // Check for snapshot validity
+                guard let snapshot = snapshot else {
+                    print("Invalid snapshot returned for daily check-ins")
+                    return
+                }
+                
+                print("Daily check-ins snapshot received with \(snapshot.documents.count) documents")
+                
+                do {
+                    // Map Firestore documents to DailyCheckin objects
+                    let checkins = try snapshot.documents.compactMap { doc -> DailyCheckin? in
+                        // Print doc data for debugging
+                        print("Processing check-in document: \(doc.documentID)")
+                        
+                        return try doc.data(as: DailyCheckin.self)
+                    }
+                    
+                    // Update on the main thread to ensure UI updates
+                    DispatchQueue.main.async {
+                        // Use animation to make the update smoother
+                        withAnimation {
+                            self.dailyCheckins = checkins
+                        }
+                        print("Updated dailyCheckins with \(checkins.count) items")
+                    }
+                } catch {
+                    print("Error decoding daily check-ins: \(error.localizedDescription)")
+                }
+            }
+    }
+
+    // Add this function to refresh check-ins on demand
+    func refreshDailyCheckins() {
+        guard let userId = currentUser?.userId else {
+            print("Cannot refresh check-ins: No current user")
+            return
+        }
+        
+        // Re-setup the listener to force a refresh
+        setupDailyCheckinsListener(uid: userId)
+    }
+
     func joinGroup(code: String) async throws {
         guard let user = auth.currentUser else {
             throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
@@ -245,6 +310,7 @@ class AuthManager: ObservableObject {
                     self.errorMessage = error.localizedDescription
                 }
             }
+        setupDailyCheckinsListener(uid: uid)
     }
     
     private func setupGroupListener(groupId: String) {

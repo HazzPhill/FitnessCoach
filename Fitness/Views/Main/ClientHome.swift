@@ -9,19 +9,24 @@ struct ClientHome: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var showingAddUpdate = false  // For weekly check-ins
     @State private var showingAddDailyCheckin = false // For daily check-ins
+    @State private var refreshDailyCheckins = false // Trigger for refreshing daily check-ins
     @Namespace private var namespace
     @Namespace private var updatezoom
+    @Namespace private var checkinNamespace
 
     @State private var engine: CHHapticEngine?
 
     // Compute weight entries.
     var weightEntries: [WeightEntry] {
-        authManager.yearlyUpdates
-            .compactMap { update in
-                guard let date = update.date else { return nil }
+        let calendar = Calendar.current
+        let currentYear = calendar.component(.year, from: Date())
+        return authManager.latestUpdates.compactMap { update in
+            if let date = update.date, calendar.component(.year, from: date) == currentYear {
                 return WeightEntry(date: date, weight: update.weight)
             }
-            .sorted { $0.date < $1.date }
+            return nil
+        }
+        .sorted { $0.date < $1.date }
     }
     
     var body: some View {
@@ -107,6 +112,59 @@ struct ClientHome: View {
                         }
                         .scrollIndicators(.hidden)
                         
+                        // IMPROVED: Daily Check-ins Section with better animations and update handling
+                        HStack {
+                            Text("Daily Check-ins")
+                                .font(.title2)
+                                .fontWeight(.regular)
+                                .foregroundStyle(.black)
+                            Spacer()
+                            Button {
+                                showingAddDailyCheckin = true
+                                let generator = UIImpactFeedbackGenerator(style: .light)
+                                generator.impactOccurred()
+                            } label: {
+                                Circle()
+                                    .frame(width: 30, height: 30)
+                                    .foregroundStyle(Color("Accent"))
+                                    .overlay(
+                                        Image(systemName: "plus")
+                                            .foregroundStyle(.white)
+                                    )
+                            }
+                        }
+
+                        // UPDATED: LazyVStack for better performance
+                        LazyVStack(spacing: 16) {
+                            if authManager.dailyCheckins.isEmpty {
+                                Text("No daily check-ins yet.")
+                                    .foregroundColor(.gray)
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                            } else {
+                                ForEach(authManager.dailyCheckins) { checkin in
+                                    NavigationLink {
+                                        DailyCheckinDetailView(checkin: checkin)
+                                            .environmentObject(authManager)
+                                            .navigationTransition(.zoom(sourceID: checkin.id ?? "", in: checkinNamespace))
+                                    } label: {
+                                        DailyCheckinPreview(checkin: checkin)
+                                            .matchedTransitionSource(id: checkin.id ?? "", in: checkinNamespace)
+                                            .transition(.opacity.combined(with: .move(edge: .top)))
+                                            .simultaneousGesture(TapGesture().onEnded {
+                                                let generator = UIImpactFeedbackGenerator(style: .light)
+                                                generator.impactOccurred()
+                                            })
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .animation(.spring(), value: refreshDailyCheckins)
+                        .onChange(of: refreshDailyCheckins) { _ in
+                            // Force immediate refresh when this value changes
+                            authManager.refreshDailyCheckins()
+                        }
                         
                         // Weekly Check-ins Section
                         HStack {
@@ -177,9 +235,24 @@ struct ClientHome: View {
                     .padding()
                 }
             }
+            // IMPROVED: Daily check-in sheet with better dismiss handling
+            .sheet(isPresented: $showingAddDailyCheckin, onDismiss: {
+                // Force refresh when sheet is dismissed
+                withAnimation {
+                    refreshDailyCheckins.toggle()
+                }
+            }) {
+                DailyCheckinView(userId: client.userId)
+                    .environmentObject(authManager)
+            }
+            // Weekly check-in sheet
             .sheet(isPresented: $showingAddUpdate) {
                 AddUpdateView()
                     .environmentObject(authManager)
+            }
+            .onAppear {
+                // Make sure daily check-ins are refreshed when the view appears
+                authManager.refreshDailyCheckins()
             }
         }
     }
