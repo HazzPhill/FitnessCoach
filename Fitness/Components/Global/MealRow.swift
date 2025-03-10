@@ -56,9 +56,10 @@ struct MealRow: View {
         .padding()
         .overlay(
             RoundedRectangle(cornerRadius: 6)
-                .stroke(Color("BoxStroke"), lineWidth: 2)
+                .stroke(Color("BoxStroke"), lineWidth: 3)
         )
-        .background(Color("Background"))
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
         .frame(maxWidth: 220)
     }
 }

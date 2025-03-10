@@ -25,9 +25,10 @@ struct KPIBox: View {
         .padding(.leading,16)
         .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color("BoxStroke"), lineWidth: 2)
+                        .stroke(Color("BoxStroke"), lineWidth: 3)
                 )
         .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }
 

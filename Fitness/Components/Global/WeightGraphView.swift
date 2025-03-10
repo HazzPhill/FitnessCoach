@@ -14,7 +14,7 @@ struct WeightGraphView: View {
     var body: some View {
         
         RoundedRectangle(cornerRadius: 12)
-            .stroke(Color("BoxStroke"), lineWidth: 2)
+            .stroke(Color("BoxStroke"), lineWidth: 3)
             .overlay {
                 Chart {
                     ForEach(weightEntries) { entry in
@@ -45,6 +45,7 @@ struct WeightGraphView: View {
             }
         .frame(height: 200)
         .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 

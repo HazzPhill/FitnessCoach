@@ -114,9 +114,10 @@ struct DailyCheckinPreview: View {
         .padding()
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color("BoxStroke"), lineWidth: 2)
+                .stroke(Color("BoxStroke"), lineWidth: 3)
         )
         .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
