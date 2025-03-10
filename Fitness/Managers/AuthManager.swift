@@ -190,29 +190,50 @@ class AuthManager: ObservableObject {
         }
     }
 
-    // Perform the actual deletion of check-ins
     func cleanupOldCheckins() async {
         guard let userId = currentUser?.userId else { return }
         
         do {
-            // Get all check-ins older than today
             let calendar = Calendar.current
-            let startOfToday = calendar.startOfDay(for: Date())
+            let today = Date()
+            let weekday = calendar.component(.weekday, from: today)
             
-            let snapshot = try await db.collection("daily_checkins")
-                .whereField("userId", isEqualTo: userId)
-                .whereField("date", isLessThan: startOfToday)
-                .getDocuments()
+            // Check if today is Monday (weekday == 2 in Calendar, as Sunday == 1)
+            let isMonday = (weekday == 2)
             
-            // Delete each check-in
-            for document in snapshot.documents {
-                try await db.collection("daily_checkins").document(document.documentID).delete()
-                print("Deleted old check-in: \(document.documentID)")
+            if isMonday {
+                // On Monday, get ALL check-ins for this user regardless of date
+                let snapshot = try await db.collection("daily_checkins")
+                    .whereField("userId", isEqualTo: userId)
+                    .getDocuments()
+                
+                // Delete each check-in
+                for document in snapshot.documents {
+                    try await db.collection("daily_checkins").document(document.documentID).delete()
+                    print("Deleted check-in for Monday cleanup: \(document.documentID)")
+                }
+                
+                print("Completed Monday cleanup of ALL daily check-ins")
+            } else {
+                // On other days, just delete check-ins older than today (original behavior)
+                let startOfToday = calendar.startOfDay(for: today)
+                
+                let snapshot = try await db.collection("daily_checkins")
+                    .whereField("userId", isEqualTo: userId)
+                    .whereField("date", isLessThan: startOfToday)
+                    .getDocuments()
+                
+                // Delete each check-in
+                for document in snapshot.documents {
+                    try await db.collection("daily_checkins").document(document.documentID).delete()
+                    print("Deleted old check-in: \(document.documentID)")
+                }
+                
+                print("Completed regular cleanup of old daily check-ins")
             }
             
             // Refresh the local cache after deletion
             refreshDailyCheckins()
-            print("Completed weekly cleanup of daily check-ins")
         } catch {
             print("Error cleaning up daily check-ins: \(error.localizedDescription)")
         }

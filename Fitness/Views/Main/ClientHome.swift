@@ -14,6 +14,7 @@ struct ClientHome: View {
     @Namespace private var namespace
     @Namespace private var updatezoom
     @Namespace private var checkinNamespace
+    
 
     @State private var engine: CHHapticEngine?
     
@@ -89,23 +90,38 @@ struct ClientHome: View {
                             .font(.title2)
                             .fontWeight(.regular)
                             .foregroundStyle(.black)
-                        // Horizontal scroll with 7-day cards.
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 20) {
-                                ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { day in
-                                    DayMealPlanCard(day: day,
-                                                    clientId: client.userId,
-                                                    isCoach: false)
-                                    .simultaneousGesture(TapGesture().onEnded {
-                                        let generator = UIImpactFeedbackGenerator(style: .light)
-                                        generator.impactOccurred()
-                                    })
-                                    .frame(width: 260)
+    
+                        // Then update your ScrollView with a ScrollViewReader
+                        ScrollViewReader { scrollProxy in
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 20) {
+                                    ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { day in
+                                        GeometryReader { geometry in
+                                            DayMealPlanCard(day: day,
+                                                            clientId: client.userId,
+                                                            isCoach: false)
+                                            .simultaneousGesture(TapGesture().onEnded {
+                                                let generator = UIImpactFeedbackGenerator(style: .light)
+                                                generator.impactOccurred()
+                                            })
+                                            .scaleEffect(getScaleAmount(geometry: geometry))
+                                            .animation(.easeOut(duration: 0.15), value: geometry.frame(in: .global).midX)
+                                        }
+                                        .id(day) // Important: Add an ID for the scrollTo function
+                                        .frame(width: 260, height: 400)
+                                    }
+                                }
+                                .padding(.vertical)
+                                .padding(.trailing, 20)
+                            }
+                            .scrollIndicators(.hidden)
+                            .onAppear {
+                                // Scroll to current day with animation when view appears
+                                withAnimation {
+                                    scrollProxy.scrollTo(currentDay, anchor: .leading)
                                 }
                             }
-                            .padding(.vertical)
                         }
-                        .scrollIndicators(.hidden)
                         
                         // IMPROVED: Daily Check-ins Section with better animations and update handling
                         HStack {
@@ -266,4 +282,26 @@ struct ClientHome: View {
     )
     ClientHome(client: dummyClient)
         .environmentObject(AuthManager.shared)
+}
+
+private func getScaleAmount(geometry: GeometryProxy) -> CGFloat {
+    let midPoint = UIScreen.main.bounds.width / 2
+    let viewMidPoint = geometry.frame(in: .global).midX
+    
+    let distance = abs(midPoint - viewMidPoint)
+    let percentage = distance / (UIScreen.main.bounds.width / 2)
+    
+    // Cards at center will be 100% scale, cards at edges will be at 90% scale
+    let scale = 1.0 - min(percentage * 0.2, 0.2)
+    
+    return scale
+}
+
+// Add this computed property to get the current day
+private var currentDay: String {
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "EEE" // Short weekday name (Mon, Tue, etc.)
+    let dayString = dateFormatter.string(from: Date())
+    // Convert to format that matches your data (first 3 letters)
+    return String(dayString.prefix(3))
 }
