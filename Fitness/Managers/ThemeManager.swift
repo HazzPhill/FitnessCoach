@@ -277,53 +277,44 @@ struct AnimatedThemePicker: View {
     @Namespace private var animation
     
     var body: some View {
-        VStack(spacing: 8) {
-            Text("Theme Mode")
-                .font(.headline)
-                .foregroundColor(themeManager.textColor(for: systemColorScheme))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
+        ZStack(alignment: .center) {
+            // Background card
+            RoundedRectangle(cornerRadius: 16)
+                .fill(themeManager.cardBackgroundColor(for: systemColorScheme))
+                .frame(height: 40)
             
-            ZStack(alignment: .center) {
-                // Background card
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(themeManager.cardBackgroundColor(for: systemColorScheme).opacity(0.3))
-                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-                    .frame(height: 60)
-                
-                // Theme options in horizontal layout
-                HStack(spacing: 0) {
-                    ForEach(AppTheme.allCases) { theme in
-                        ThemeOption(
-                            theme: theme,
-                            isSelected: selectedTheme == theme,
-                            themeManager: themeManager,
-                            systemColorScheme: systemColorScheme,
-                            namespace: animation
-                        )
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                                selectedTheme = theme
-                                
-                                // Trigger indicator animation
-                                animateIndicator = false
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                                        animateIndicator = true
-                                    }
+            // Theme options in horizontal layout
+            HStack(spacing: 0) {
+                ForEach(AppTheme.allCases) { theme in
+                    ThemeOption(
+                        theme: theme,
+                        isSelected: selectedTheme == theme,
+                        themeManager: themeManager,
+                        systemColorScheme: systemColorScheme,
+                        namespace: animation
+                    )
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                            selectedTheme = theme
+                            
+                            // Trigger indicator animation
+                            animateIndicator = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                                    animateIndicator = true
                                 }
-                                
-                                // Haptic feedback
-                                let generator = UIImpactFeedbackGenerator(style: .light)
-                                generator.impactOccurred()
                             }
+                            
+                            // Haptic feedback
+                            let generator = UIImpactFeedbackGenerator(style: .light)
+                            generator.impactOccurred()
                         }
                     }
                 }
-                .padding(4)
             }
-            .padding(.horizontal)
+            .padding(4)
         }
+        .padding(.horizontal)
         .onAppear {
             // Initial animation when view appears
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
@@ -364,7 +355,7 @@ struct ThemeOption: View {
                     .foregroundColor(isSelected ? .white : themeManager.textColor(for: systemColorScheme).opacity(0.8))
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 10)
+            .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
         }
         .contentShape(Rectangle())
@@ -383,15 +374,40 @@ struct ThemeOption: View {
         }
     }
     
-    // Get accent color for each theme
+    // Get accent color for each theme that matches the theme colors
     private var themeAccentColor: Color {
         switch theme {
         case .system:
-            return Color.blue
+            // Use the default accent color
+            return themeManager.activeColorScheme(for: systemColorScheme).accentColor
         case .light:
-            return Color.orange
+            // Use a light mode accent color
+            return themeManager.activeColorScheme(for: .light).accentColor
         case .dark:
-            return Color.purple
+            // Use a dark mode accent color
+            return themeManager.activeColorScheme(for: .dark).accentColor
         }
+    }
+}
+
+extension ThemeManager {
+    // Get the title font (Stranded)
+    func titleFont(size: CGFloat = 24) -> Font {
+        return .AloeveraDisplayRegular(size: size)
+    }
+    
+    // Get the heading font (Stranded)
+    func headingFont(size: CGFloat = 24) -> Font {
+        return .AloeveraDisplayRegular(size: size)
+    }
+    
+    // Get the body font (Macaria)
+    func bodyFont(size: CGFloat = 16) -> Font {
+        return .macaria(size: size)
+    }
+    
+    // Get the caption font (Macaria)
+    func captionFont(size: CGFloat = 12) -> Font {
+        return .macaria(size: size)
     }
 }

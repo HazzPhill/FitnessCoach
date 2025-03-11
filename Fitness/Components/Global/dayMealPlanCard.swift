@@ -13,7 +13,7 @@ struct DayMealPlanCard: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 12) {
                 Text(day)
-                    .font(.system(size: 16))
+                    .font(themeManager.headingFont(size: 16))
                     .fontWeight(.semibold)
                     .foregroundColor(themeManager.textColor(for: colorScheme))
                     .padding(.bottom, 5)
@@ -31,9 +31,4 @@ struct DayMealPlanCard: View {
             )
         }
     }
-}
-
-#Preview {
-    DayMealPlanCard(day: "Monday", clientId: "dummyClientId", isCoach: false)
-        .environmentObject(ThemeManager())
 }

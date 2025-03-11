@@ -39,8 +39,7 @@ struct ClientHome: View {
                         // Header Section
                         HStack {
                             Text("Welcome \(authManager.currentUser?.firstName ?? "")")
-                                .font(.title)
-                                .fontWeight(.semibold)
+                                .font(themeManager.titleFont(size: 24))
                                 .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                                 .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
                             Spacer()
@@ -79,8 +78,7 @@ struct ClientHome: View {
                         }
                         
                         Text("Your Progress")
-                            .font(.title2)
-                            .fontWeight(.regular)
+                            .font(themeManager.headingFont(size: 18))
                             .foregroundStyle(themeManager.textColor(for: colorScheme))
                         
                         WeightGraphView(weightEntries: weightViewModel.weightEntries)
@@ -88,8 +86,7 @@ struct ClientHome: View {
                         
                         // Daily Goals Grid Section
                         Text("Daily Goals")
-                            .font(.title2)
-                            .fontWeight(.regular)
+                            .font(themeManager.headingFont(size: 18))
                             .foregroundStyle(themeManager.textColor(for: colorScheme))
                         DailyGoalsGridView(userId: client.userId)
                             .environmentObject(themeManager)
@@ -100,8 +97,7 @@ struct ClientHome: View {
                             )
                         
                         Text("Your Plan")
-                            .font(.title2)
-                            .fontWeight(.regular)
+                            .font(themeManager.headingFont(size: 18))
                             .foregroundStyle(themeManager.textColor(for: colorScheme))
     
                         // Then update your ScrollView with this implementation
@@ -152,8 +148,7 @@ struct ClientHome: View {
                         // IMPROVED: Daily Check-ins Section with better animations and update handling
                         HStack {
                             Text("Daily Check-ins")
-                                .font(.title2)
-                                .fontWeight(.regular)
+                                .font(themeManager.headingFont(size:18))
                                 .foregroundStyle(themeManager.textColor(for: colorScheme))
                             Spacer()
                             Button {
@@ -175,6 +170,7 @@ struct ClientHome: View {
                         LazyVStack(spacing: 16) {
                             if authManager.dailyCheckins.isEmpty {
                                 Text("No daily check-ins yet.")
+                                    .font(themeManager.bodyFont(size: 16))
                                     .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                                     .padding()
                                     .frame(maxWidth: .infinity, alignment: .center)
@@ -208,9 +204,8 @@ struct ClientHome: View {
                         
                         // Weekly Check-ins Section
                         HStack {
-                            Text("Check-ins")
-                                .font(.title2)
-                                .fontWeight(.regular)
+                            Text("Weekly Check-ins")
+                                .font(themeManager.headingFont(size: 18))
                                 .foregroundStyle(themeManager.textColor(for: colorScheme))
                             Spacer()
                             Button {
@@ -230,6 +225,7 @@ struct ClientHome: View {
                         ScrollView {
                             if authManager.latestUpdates.isEmpty {
                                 Text("No check-ins yet.")
+                                    .font(themeManager.bodyFont(size: 16))
                                     .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                                     .padding()
                             } else {
@@ -263,8 +259,8 @@ struct ClientHome: View {
                                         .environmentObject(themeManager)
                                         .navigationTransition(.zoom(sourceID: "allUpdates", in: updatezoom))) {
                             Text("View All")
+                                .font(themeManager.bodyFont(size: 16))
                                 .frame(maxWidth: .infinity)
-                                .font(.headline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(Color.white)
                                 .padding(.vertical, 12)
@@ -303,23 +299,7 @@ struct ClientHome: View {
     }
 }
 
-#Preview {
-    let dummyClient = AuthManager.DBUser(
-        userId: "client123",
-        firstName: "John",
-        lastName: "Doe",
-        email: "john.doe@example.com",
-        role: .client,
-        groupId: "group123",
-        profileImageUrl: nil,
-        createdAt: nil
-    )
-    ClientHome(client: dummyClient)
-        .environmentObject(AuthManager.shared)
-        .environmentObject(ThemeManager())
-}
-
-// Keep the existing helper functions
+// Helper functions
 private func getScaleAmount(geometry: GeometryProxy) -> CGFloat {
     let midPoint = UIScreen.main.bounds.width / 2
     let viewMidPoint = geometry.frame(in: .global).midX

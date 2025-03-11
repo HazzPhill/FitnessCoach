@@ -59,6 +59,7 @@ struct SettingsView: View {
                                         AnimatedThemePicker(selectedTheme: $themeManager.selectedTheme, themeManager: themeManager)
                                             .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                                             .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                                            .padding(.vertical)
                             
                             // Color scheme selection
                             NavigationLink(destination: ColorSchemeSelectionView()
@@ -183,7 +184,7 @@ struct SettingsView: View {
                     .scrollContentBackground(.hidden)
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle("")
             // MARK: Group image picker (for coaches)
             .photosPicker(isPresented: $showingGroupImagePicker, selection: $selectedGroupItem, matching: .images)
             .onChange(of: selectedGroupItem) { newItem in

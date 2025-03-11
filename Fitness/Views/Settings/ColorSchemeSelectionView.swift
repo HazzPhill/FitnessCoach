@@ -33,7 +33,7 @@ struct ColorSchemeSelectionView: View {
             
             ScrollView {
                 VStack(spacing: 25) {
-                    Text("Select a color scheme to customize your app's appearance. The accent color will automatically adjust based on your theme selection.")
+                    Text("Select a color scheme to customise your app's appearance. The accent color will automatically adjust based on your theme selection.")
                         .font(.subheadline)
                         .foregroundColor(themeManager.textColor(for: colorScheme))
                         .padding(.horizontal)

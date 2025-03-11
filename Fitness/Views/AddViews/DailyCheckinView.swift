@@ -27,9 +27,11 @@ struct DailyCheckinView: View {
                 
                 Form {
                     Section(header: Text("Daily Goals")
+                        .font(themeManager.headingFont(size: 18))
                         .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
                         if viewModel.goalsList.isEmpty {
                             Text("No goals set. Add goals in your profile settings.")
+                                .font(themeManager.bodyFont())
                                 .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                         } else {
                             ForEach(viewModel.goalsList) { goal in
@@ -52,23 +54,28 @@ struct DailyCheckinView: View {
                                 ))
                                 .tint(themeManager.accentColor(for: colorScheme))
                                 .foregroundColor(themeManager.textColor(for: colorScheme))
+                                .font(themeManager.bodyFont())
                             }
                         }
                     }
                     .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     
                     Section(header: Text("Notes")
+                        .font(themeManager.headingFont(size: 18))
                         .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
                         TextEditor(text: $notes)
+                            .font(themeManager.bodyFont())
                             .frame(minHeight: 100)
                             .foregroundColor(themeManager.textColor(for: colorScheme))
                     }
                     .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     
                     Section(header: Text("Photos")
+                        .font(themeManager.headingFont(size: 18))
                         .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
                         PhotosPicker(selection: $selectedItems, matching: .images, photoLibrary: .shared()) {
                             Label("Select Photos", systemImage: "photo.on.rectangle.angled")
+                                .font(themeManager.bodyFont())
                                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                         }
                         
@@ -107,6 +114,7 @@ struct DailyCheckinView: View {
                     if let errorMessage = errorMessage {
                         Section {
                             Text(errorMessage)
+                                .font(themeManager.bodyFont())
                                 .foregroundColor(.red)
                         }
                         .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
@@ -125,6 +133,7 @@ struct DailyCheckinView: View {
                             submitCheckin()
                         }
                         .disabled(viewModel.goalsList.isEmpty)
+                        .font(themeManager.bodyFont())
                         .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                     }
                 }
@@ -132,6 +141,7 @@ struct DailyCheckinView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                 }
             }
@@ -211,10 +221,4 @@ struct DailyCheckinView: View {
             }
         }
     }
-}
-
-#Preview {
-    DailyCheckinView(userId: "dummyUserId")
-        .environmentObject(AuthManager.shared)
-        .environmentObject(ThemeManager())
 }

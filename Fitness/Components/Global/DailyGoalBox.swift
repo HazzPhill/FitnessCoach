@@ -14,10 +14,10 @@ struct DailyGoalBox: View {
             } label: {
                 VStack(alignment: .leading){
                     Text(value)
-                        .font(.system(size: 24, weight: .semibold))
+                        .font(themeManager.titleFont()) // Using Stranded at 18px
                         .foregroundColor(themeManager.textColor(for: colorScheme))
                     Text(label)
-                        .font(.system(size: 14, weight: .regular))
+                        .font(themeManager.captionFont()) // Using Panoragraf at 12px
                         .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.5))
                 }
                 .padding()

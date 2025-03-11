@@ -54,7 +54,7 @@ struct AccountSettings: View {
                         Button("Change Picture") {
                             showingProfileImagePicker = true
                         }
-                        .foregroundColor(themeManager.accentColor(for: colorScheme))
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                     }
                 }
                 .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))

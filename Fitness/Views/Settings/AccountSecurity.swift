@@ -35,7 +35,7 @@ struct SecuritySettings: View {
                             }
                         }
                     }
-                    .foregroundColor(themeManager.accentColor(for: colorScheme))
+                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                     
                     if let message = resetMessage {
                         Text(message)

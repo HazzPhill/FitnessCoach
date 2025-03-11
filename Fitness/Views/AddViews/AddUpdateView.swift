@@ -64,7 +64,7 @@ struct AddUpdateView: View {
                         // Update Info Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Update Info")
-                                .font(.headline)
+                                .font(themeManager.headingFont(size: 18))
                                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
@@ -77,11 +77,12 @@ struct AddUpdateView: View {
                         // Weekly Reflection Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Weekly Reflection")
-                                .font(.headline)
+                                .font(themeManager.headingFont(size: 18))
                                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
                             Text("What was your biggest win of the week?")
+                                .font(themeManager.bodyFont())
                                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             ZStack {
@@ -93,6 +94,7 @@ struct AddUpdateView: View {
                                     )
                                 
                                 TextEditor(text: $biggestWin)
+                                    .font(themeManager.bodyFont())
                                     .scrollContentBackground(.hidden) // This is key - hides the default background
                                     .background(Color.clear)
                                     .foregroundColor(themeManager.textColor(for: colorScheme))
@@ -101,6 +103,7 @@ struct AddUpdateView: View {
                             .padding(.horizontal)
                             
                             Text("Have you had any issues?")
+                                .font(themeManager.bodyFont())
                                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             ZStack {
@@ -112,6 +115,7 @@ struct AddUpdateView: View {
                                     )
                                 
                                 TextEditor(text: $issues)
+                                    .font(themeManager.bodyFont())
                                     .scrollContentBackground(.hidden) // This is key - hides the default background
                                     .background(Color.clear)
                                     .foregroundColor(themeManager.textColor(for: colorScheme))
@@ -120,6 +124,7 @@ struct AddUpdateView: View {
                             .padding(.horizontal)
                             
                             Text("Did you require anything extra from me as a coach?")
+                                .font(themeManager.bodyFont())
                                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             ZStack {
@@ -131,6 +136,7 @@ struct AddUpdateView: View {
                                     )
                                 
                                 TextEditor(text: $extraCoachRequest)
+                                    .font(themeManager.bodyFont())
                                     .scrollContentBackground(.hidden) // This is key - hides the default background
                                     .background(Color.clear)
                                     .foregroundColor(themeManager.textColor(for: colorScheme))
@@ -141,18 +147,20 @@ struct AddUpdateView: View {
                         
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Performance Ratings")
-                                .font(.headline)
+                                .font(themeManager.headingFont(size: 18))
                                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
                             // Calories Rating (1-7)
                             HStack {
                                 Text("Calories")
+                                    .font(themeManager.bodyFont())
                                     .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 Spacer()
                                 Picker("Calories", selection: $caloriesRating) {
                                     ForEach(1...7, id: \.self) { value in
                                         Text("\(value)")
+                                            .font(themeManager.bodyFont())
                                             .foregroundColor(themeManager.textColor(for: colorScheme))
                                             .tag(value)
                                     }
@@ -165,11 +173,13 @@ struct AddUpdateView: View {
                             // Steps Rating (1-7)
                             HStack {
                                 Text("Steps")
+                                    .font(themeManager.bodyFont())
                                     .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 Spacer()
                                 Picker("Steps", selection: $stepsRating) {
                                     ForEach(1...7, id: \.self) { value in
                                         Text("\(value)")
+                                            .font(themeManager.bodyFont())
                                             .foregroundColor(themeManager.textColor(for: colorScheme))
                                             .tag(value)
                                     }
@@ -182,11 +192,13 @@ struct AddUpdateView: View {
                             // Protein Rating (1-7)
                             HStack {
                                 Text("Protein")
+                                    .font(themeManager.bodyFont())
                                     .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 Spacer()
                                 Picker("Protein", selection: $proteinRating) {
                                     ForEach(1...7, id: \.self) { value in
                                         Text("\(value)")
+                                            .font(themeManager.bodyFont())
                                             .foregroundColor(themeManager.textColor(for: colorScheme))
                                             .tag(value)
                                     }
@@ -199,11 +211,13 @@ struct AddUpdateView: View {
                             // Training Rating (1-5)
                             HStack {
                                 Text("Training")
+                                    .font(themeManager.bodyFont())
                                     .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 Spacer()
                                 Picker("Training", selection: $trainingRating) {
                                     ForEach(1...5, id: \.self) { value in
                                         Text("\(value)")
+                                            .font(themeManager.bodyFont())
                                             .foregroundColor(themeManager.textColor(for: colorScheme))
                                             .tag(value)
                                     }
@@ -216,9 +230,11 @@ struct AddUpdateView: View {
                             // Display the computed final score
                             HStack {
                                 Text("Final Score:")
+                                    .font(themeManager.bodyFont())
                                     .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 Spacer()
                                 Text(String(format: "%.1f / 10", finalScore))
+                                    .font(themeManager.bodyFont())
                                     .fontWeight(.bold)
                                     .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                             }
@@ -229,7 +245,7 @@ struct AddUpdateView: View {
                         // Photo Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Photo")
-                                .font(.headline)
+                                .font(themeManager.headingFont(size: 18))
                                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
@@ -244,6 +260,7 @@ struct AddUpdateView: View {
                                         .padding(.horizontal)
                                 } else {
                                     Text("Select Image")
+                                        .font(themeManager.bodyFont())
                                         .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                         .padding()
                                         .frame(maxWidth: .infinity)
@@ -269,6 +286,7 @@ struct AddUpdateView: View {
                         // Display error message if needed
                         if let errorMessage = errorMessage {
                             Text(errorMessage)
+                                .font(themeManager.bodyFont())
                                 .foregroundColor(.red)
                                 .padding(.horizontal)
                         }
@@ -290,6 +308,7 @@ struct AddUpdateView: View {
                         Button("Submit") {
                             submitUpdate()
                         }
+                        .font(themeManager.bodyFont())
                         .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                     }
                 }
@@ -297,6 +316,7 @@ struct AddUpdateView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                 }
             }
@@ -328,22 +348,6 @@ struct AddUpdateView: View {
                 errorMessage = error.localizedDescription
             }
             isSubmitting = false
-        }
-    }
-}
-
-struct AddUpdateView_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            AddUpdateView()
-                .environmentObject(AuthManager.shared)
-                .environmentObject(ThemeManager())
-                .preferredColorScheme(.light)
-            
-            AddUpdateView()
-                .environmentObject(AuthManager.shared)
-                .environmentObject(ThemeManager())
-                .preferredColorScheme(.dark)
         }
     }
 }

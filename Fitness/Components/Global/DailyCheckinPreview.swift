@@ -76,16 +76,16 @@ struct DailyCheckinPreview: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(formattedDay(from: checkin.date))
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(themeManager.headingFont(size: 16))
                         .foregroundColor(themeManager.textColor(for: colorScheme))
                     Spacer()
                     Text(formattedDate(from: checkin.date))
-                        .font(.system(size: 14, weight: .regular))
+                        .font(themeManager.bodyFont(size: 14))
                         .foregroundColor(themeManager.textColor(for: colorScheme))
                 }
                 
                 Text("\(completedGoalsCount)/\(totalGoalsCount) Goals Completed")
-                    .font(.system(size: 14, weight: .regular))
+                    .font(themeManager.bodyFont(size: 14))
                     .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                 
                 // Progress bar
@@ -114,25 +114,4 @@ struct DailyCheckinPreview: View {
         .background(themeManager.cardBackgroundColor(for: colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
-}
-
-#Preview {
-    let goals = [
-        CompletedGoal(goalId: "1", name: "Drink water", completed: true),
-        CompletedGoal(goalId: "2", name: "Exercise", completed: true),
-        CompletedGoal(goalId: "3", name: "Eat healthy", completed: false)
-    ]
-    
-    let checkin = DailyCheckin(
-        id: "1",
-        userId: "user123",
-        date: Date(),
-        completedGoals: goals,
-        notes: "Had a good day!",
-        imageUrls: ["https://example.com/image.jpg"],
-        timestamp: Date()
-    )
-    
-    return DailyCheckinPreview(checkin: checkin)
-        .environmentObject(ThemeManager())
 }

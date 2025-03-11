@@ -51,7 +51,7 @@ struct MealRow: View {
     private var mealRowLabel: some View {
         HStack {
             Text(viewModel.meal?.mealName ?? mealSlot)
-                .font(.system(size: 14))
+                .font(themeManager.bodyFont(size: 14))
                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
             Spacer()
             Image(systemName: "fork.knife")
@@ -65,17 +65,5 @@ struct MealRow: View {
         .background(themeManager.cardBackgroundColor(for: colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .frame(maxWidth: 220)
-    }
-}
-
-#Preview {
-    Group {
-        MealRow(clientId: "test123", day: "Mon", mealSlot: "Meal 1", isCoach: false)
-            .environmentObject(ThemeManager())
-            .preferredColorScheme(.light)
-        
-        MealRow(clientId: "test123", day: "Mon", mealSlot: "Meal 1", isCoach: false)
-            .environmentObject(ThemeManager())
-            .preferredColorScheme(.dark)
     }
 }

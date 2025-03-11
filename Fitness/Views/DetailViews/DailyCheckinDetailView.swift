@@ -80,7 +80,7 @@ struct DailyCheckinDetailView: View {
                 // Title & Date with conditional edit button
                 HStack {
                     Text(formattedDay(from: checkin.date))
-                        .font(.title2)
+                        .font(themeManager.headingFont(size: 18))
                         .fontWeight(.semibold)
                         .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                     
@@ -89,7 +89,7 @@ struct DailyCheckinDetailView: View {
                     HStack(spacing: 8) {
                         if let date = checkin.date {
                             Text(date.formattedWithOrdinal())
-                                .font(.footnote)
+                                .font(themeManager.captionFont(size: 12))
                                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                         }
                         
@@ -100,7 +100,7 @@ struct DailyCheckinDetailView: View {
                             } label: {
                                 Image(systemName: "pencil.circle.fill")
                                     .font(.title3)
-                                    .foregroundColor(themeManager.accentColor(for: colorScheme))
+                                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                             }
                         }
                     }
@@ -131,7 +131,7 @@ struct DailyCheckinDetailView: View {
                 VStack(spacing: 12) {
                     HStack {
                         Text("Goals")
-                            .font(.headline)
+                            .font(themeManager.headingFont(size: 18))
                             .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                         Spacer()
                     }
@@ -142,7 +142,8 @@ struct DailyCheckinDetailView: View {
                             Image(systemName: goal.completed ? "checkmark.circle.fill" : "circle")
                                 .foregroundColor(goal.completed ? themeManager.accentOrWhiteText(for: colorScheme) : .gray)
                             Text(goal.name)
-                                .foregroundColor(goal.completed ?themeManager.accentOrWhiteText(for: colorScheme) : .gray)
+                                .font(themeManager.bodyFont(size: 16))
+                                .foregroundColor(goal.completed ? themeManager.accentOrWhiteText(for: colorScheme) : .gray)
                             Spacer()
                         }
                         .padding(.vertical, 4)
@@ -171,7 +172,7 @@ struct DailyCheckinDetailView: View {
                 if let imageUrls = checkin.imageUrls, imageUrls.count > 1 {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Photos")
-                            .font(.headline)
+                            .font(themeManager.headingFont(size: 18))
                             .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                             .padding(.horizontal)
                         
@@ -288,10 +289,10 @@ struct InfoBoxView: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(title)
-                .font(.caption)
+                .font(themeManager.captionFont(size: 12))
                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
             Text(value)
-                .font(.headline)
+                .font(themeManager.bodyFont(size: 16))
                 .fontWeight(.bold)
                 .foregroundColor(valueColor)
         }
@@ -315,10 +316,10 @@ struct ReflectionBoxView: View {
     var body: some View {
         VStack(alignment: .center, spacing: 8) {
             Text(title)
-                .font(.headline)
+                .font(themeManager.headingFont(size: 18))
                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
             Text(text)
-                .font(.body)
+                .font(themeManager.bodyFont(size: 16))
                 .multilineTextAlignment(.center)
                 .foregroundColor(themeManager.textColor(for: colorScheme))
         }
@@ -366,29 +367,5 @@ extension Date {
         }
         
         return "\(monthString) \(day)\(suffix) \(yearString)"
-    }
-}
-
-#Preview {
-    let goals = [
-        CompletedGoal(goalId: "1", name: "Drink water", completed: true),
-        CompletedGoal(goalId: "2", name: "Exercise", completed: true),
-        CompletedGoal(goalId: "3", name: "Eat healthy", completed: false)
-    ]
-    
-    let checkin = DailyCheckin(
-        id: "1",
-        userId: "user123",
-        date: Date(),
-        completedGoals: goals,
-        notes: "Had a good day! I managed to stay hydrated and got a good workout in. Still working on my nutrition though.",
-        imageUrls: ["https://example.com/image1.jpg", "https://example.com/image2.jpg"],
-        timestamp: Date()
-    )
-    
-    return NavigationStack {
-        DailyCheckinDetailView(checkin: checkin)
-            .environmentObject(AuthManager.shared)
-            .environmentObject(ThemeManager())
     }
 }

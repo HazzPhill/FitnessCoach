@@ -70,16 +70,16 @@ struct UpdatePreview: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(label)
-                        .font(.system(size: 16, weight: .regular))
+                        .font(themeManager.bodyFont(size: 16))
                         .foregroundColor(themeManager.textColor(for: colorScheme))
                     Spacer()
                     Text(formattedDate)  // Display the formatted date
-                        .font(.system(size: 16, weight: .regular))
+                        .font(themeManager.bodyFont(size: 16))
                         .foregroundColor(themeManager.textColor(for: colorScheme))
                 }
                 
                 Text("\(Weight) KG")
-                    .font(.system(size: 16, weight: .regular))
+                    .font(themeManager.bodyFont(size: 16))
                     .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
             }
         }
@@ -91,18 +91,5 @@ struct UpdatePreview: View {
         )
         .background(themeManager.cardBackgroundColor(for: colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-}
-
-#Preview {
-    // Use current date for preview demonstration
-    Group {
-        UpdatePreview(label: "Feeling Good", Weight: 53, date: Date(), imageUrl: "https://via.placeholder.com/150")
-            .environmentObject(ThemeManager())
-            .preferredColorScheme(.light)
-        
-        UpdatePreview(label: "Feeling Good", Weight: 53, date: Date(), imageUrl: "https://via.placeholder.com/150")
-            .environmentObject(ThemeManager())
-            .preferredColorScheme(.dark)
     }
 }
