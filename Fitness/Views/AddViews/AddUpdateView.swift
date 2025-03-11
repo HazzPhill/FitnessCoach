@@ -3,6 +3,8 @@ import PhotosUI
 
 struct AddUpdateView: View {
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
     @State private var updateName = ""
@@ -54,7 +56,7 @@ struct AddUpdateView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color("Background")
+                themeManager.backgroundColor(for: colorScheme)
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -63,133 +65,162 @@ struct AddUpdateView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Update Info")
                                 .font(.headline)
-                                .foregroundColor(Color("SecondaryAccent"))
+                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
                             ModernTextField(placeholder: "Name", text: $updateName)
+                                .environmentObject(themeManager)
                             ModernTextField(placeholder: "Weight (KG)", text: $weightText, keyboardType: .decimalPad)
+                                .environmentObject(themeManager)
                         }
                         
                         // Weekly Reflection Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Weekly Reflection")
                                 .font(.headline)
-                                .foregroundColor(Color("SecondaryAccent"))
+                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
                             Text("What was your biggest win of the week?")
-                                .foregroundColor(Color("SecondaryAccent"))
+                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
-                            TextEditor(text: $biggestWin)
-                                .frame(height: 100)
-                                .padding(4)
-                                .background(Color("SecondaryAccent").opacity(0.1))
-                                .cornerRadius(8)
-                                .padding(.horizontal)
+                            ZStack {
+                                themeManager.cardBackgroundColor(for: colorScheme)
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
+                                    )
+                                
+                                TextEditor(text: $biggestWin)
+                                    .scrollContentBackground(.hidden) // This is key - hides the default background
+                                    .background(Color.clear)
+                                    .foregroundColor(themeManager.textColor(for: colorScheme))
+                            }
+                            .frame(height: 100)
+                            .padding(.horizontal)
                             
                             Text("Have you had any issues?")
-                                .foregroundColor(Color("SecondaryAccent"))
+                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
-                            TextEditor(text: $issues)
-                                .frame(height: 100)
-                                .padding(4)
-                                .background(Color("SecondaryAccent").opacity(0.1))
-                                .cornerRadius(8)
-                                .padding(.horizontal)
+                            ZStack {
+                                themeManager.cardBackgroundColor(for: colorScheme)
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
+                                    )
+                                
+                                TextEditor(text: $issues)
+                                    .scrollContentBackground(.hidden) // This is key - hides the default background
+                                    .background(Color.clear)
+                                    .foregroundColor(themeManager.textColor(for: colorScheme))
+                            }
+                            .frame(height: 100)
+                            .padding(.horizontal)
                             
                             Text("Did you require anything extra from me as a coach?")
-                                .foregroundColor(Color("SecondaryAccent"))
+                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
-                            TextEditor(text: $extraCoachRequest)
-                                .frame(height: 100)
-                                .padding(4)
-                                .background(Color("SecondaryAccent").opacity(0.1))
-                                .cornerRadius(8)
-                                .padding(.horizontal)
+                            ZStack {
+                                themeManager.cardBackgroundColor(for: colorScheme)
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
+                                    )
+                                
+                                TextEditor(text: $extraCoachRequest)
+                                    .scrollContentBackground(.hidden) // This is key - hides the default background
+                                    .background(Color.clear)
+                                    .foregroundColor(themeManager.textColor(for: colorScheme))
+                            }
+                            .frame(height: 100)
+                            .padding(.horizontal)
                         }
                         
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Performance Ratings")
                                 .font(.headline)
-                                .foregroundColor(Color("SecondaryAccent"))
+                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
                             // Calories Rating (1-7)
                             HStack {
                                 Text("Calories")
-                                    .foregroundColor(Color("SecondaryAccent"))
+                                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 Spacer()
                                 Picker("Calories", selection: $caloriesRating) {
                                     ForEach(1...7, id: \.self) { value in
                                         Text("\(value)")
-                                            .foregroundColor(Color("SecondaryAccent"))
+                                            .foregroundColor(themeManager.textColor(for: colorScheme))
                                             .tag(value)
                                     }
                                 }
                                 .pickerStyle(.menu)
-                                .tint(Color("SecondaryAccent"))
+                                .accentColor(themeManager.accentOrWhiteText(for: colorScheme))
                             }
                             .padding(.horizontal)
                             
                             // Steps Rating (1-7)
                             HStack {
                                 Text("Steps")
-                                    .foregroundColor(Color("SecondaryAccent"))
+                                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 Spacer()
                                 Picker("Steps", selection: $stepsRating) {
                                     ForEach(1...7, id: \.self) { value in
                                         Text("\(value)")
-                                            .foregroundColor(Color("SecondaryAccent"))
+                                            .foregroundColor(themeManager.textColor(for: colorScheme))
                                             .tag(value)
                                     }
                                 }
                                 .pickerStyle(.menu)
-                                .tint(Color("SecondaryAccent"))
+                                .accentColor(themeManager.accentOrWhiteText(for: colorScheme))
                             }
                             .padding(.horizontal)
                             
                             // Protein Rating (1-7)
                             HStack {
                                 Text("Protein")
-                                    .foregroundColor(Color("SecondaryAccent"))
+                                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 Spacer()
                                 Picker("Protein", selection: $proteinRating) {
                                     ForEach(1...7, id: \.self) { value in
                                         Text("\(value)")
-                                            .foregroundColor(Color("SecondaryAccent"))
+                                            .foregroundColor(themeManager.textColor(for: colorScheme))
                                             .tag(value)
                                     }
                                 }
                                 .pickerStyle(.menu)
-                                .tint(Color("SecondaryAccent"))
+                                .accentColor(themeManager.accentOrWhiteText(for: colorScheme))
                             }
                             .padding(.horizontal)
                             
                             // Training Rating (1-5)
                             HStack {
                                 Text("Training")
-                                    .foregroundColor(Color("SecondaryAccent"))
+                                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 Spacer()
                                 Picker("Training", selection: $trainingRating) {
                                     ForEach(1...5, id: \.self) { value in
                                         Text("\(value)")
-                                            .foregroundColor(Color("SecondaryAccent"))
+                                            .foregroundColor(themeManager.textColor(for: colorScheme))
                                             .tag(value)
                                     }
                                 }
                                 .pickerStyle(.menu)
-                                .tint(Color("SecondaryAccent"))
+                                .accentColor(themeManager.accentOrWhiteText(for: colorScheme))
                             }
                             .padding(.horizontal)
                             
                             // Display the computed final score
                             HStack {
                                 Text("Final Score:")
-                                    .foregroundColor(Color("SecondaryAccent"))
+                                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 Spacer()
                                 Text(String(format: "%.1f / 10", finalScore))
                                     .fontWeight(.bold)
-                                    .foregroundColor(Color("SecondaryAccent"))
+                                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                             }
                             .padding(.horizontal)
                         }
@@ -199,7 +230,7 @@ struct AddUpdateView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Photo")
                                 .font(.headline)
-                                .foregroundColor(Color("SecondaryAccent"))
+                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
                             PhotosPicker(selection: $selectedItem, matching: .images) {
@@ -213,14 +244,14 @@ struct AddUpdateView: View {
                                         .padding(.horizontal)
                                 } else {
                                     Text("Select Image")
-                                        .foregroundColor(Color("SecondaryAccent"))
+                                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                         .padding()
                                         .frame(maxWidth: .infinity)
-                                        .background(Color("Accent").opacity(0.1))
+                                        .background(themeManager.accentColor(for: colorScheme).opacity(0.1))
                                         .cornerRadius(8)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .stroke(Color("Accent"), lineWidth: 1)
+                                                .stroke(themeManager.accentColor(for: colorScheme), lineWidth: 1)
                                         )
                                         .padding(.horizontal)
                                 }
@@ -247,24 +278,26 @@ struct AddUpdateView: View {
                     .padding(.top)
                 }
             }
-            .navigationTitle("Add Update")
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     if isSubmitting {
                         ProgressView()
-                            .tint(Color("Accent"))
                     } else {
                         Button("Submit") {
                             submitUpdate()
                         }
-                        .foregroundColor(Color("Accent"))
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                     }
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(Color("Accent"))
+                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                 }
             }
         }
@@ -301,7 +334,16 @@ struct AddUpdateView: View {
 
 struct AddUpdateView_Previews: PreviewProvider {
     static var previews: some View {
-        AddUpdateView()
-            .environmentObject(AuthManager.shared)
+        Group {
+            AddUpdateView()
+                .environmentObject(AuthManager.shared)
+                .environmentObject(ThemeManager())
+                .preferredColorScheme(.light)
+            
+            AddUpdateView()
+                .environmentObject(AuthManager.shared)
+                .environmentObject(ThemeManager())
+                .preferredColorScheme(.dark)
+        }
     }
 }

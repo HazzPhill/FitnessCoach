@@ -3,6 +3,8 @@ import SwiftUI
 struct MealDetailsView: View {
     var meal: Meal?
     var mealSlot: String  // e.g. "Meal 1", "Snack 1"
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     
     private var totalCalories: Int {
         meal?.ingredients.reduce(0) { sum, ingredient in
@@ -31,14 +33,16 @@ struct MealDetailsView: View {
     struct ModernButton: View {
         let label: String
         let action: () -> Void
+        @EnvironmentObject var themeManager: ThemeManager
+        @Environment(\.colorScheme) var colorScheme
 
         var body: some View {
             Button(action: action) {
                 Text(label)
                     .font(.headline)
-                    .foregroundColor(Color("Background"))
+                    .foregroundColor(Color.white)
                     .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(Color("Accent"))
+                    .background(themeManager.accentColor(for: colorScheme))
                     .cornerRadius(25)
                     .padding(.horizontal)
             }
@@ -93,7 +97,7 @@ struct MealDetailsView: View {
                                                 LinearGradient(
                                                     gradient: Gradient(colors: [
                                                         Color.black.opacity(0.6),
-                                                        Color("Background").opacity(1)
+                                                        themeManager.backgroundColor(for: colorScheme).opacity(1)
                                                     ]),
                                                     startPoint: .top,
                                                     endPoint: .bottom
@@ -110,7 +114,7 @@ struct MealDetailsView: View {
                                                     LinearGradient(
                                                         gradient: Gradient(colors: [
                                                             Color.black.opacity(0.6),
-                                                            Color("Background").opacity(1)
+                                                            themeManager.backgroundColor(for: colorScheme).opacity(1)
                                                         ]),
                                                         startPoint: .top,
                                                         endPoint: .bottom
@@ -120,12 +124,12 @@ struct MealDetailsView: View {
                                         }
                                         
                                         RoundedRectangle(cornerRadius: 12)
-                                            .foregroundColor(Color("White"))
+                                            .foregroundColor(themeManager.cardBackgroundColor(for: colorScheme))
                                             .frame(width: geometry.size.width - 50, height: 73)
                                             .overlay {
                                                 Text(meal.mealName)
                                                     .font(.system(size: 28, weight: .bold))
-                                                    .foregroundColor(Color("Accent"))
+                                                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                             }
                                             .offset(y: -30)
                                             .zIndex(1)
@@ -139,10 +143,12 @@ struct MealDetailsView: View {
                                 Text(meal.mealName)
                                     .font(.title)
                                     .fontWeight(.bold)
+                                    .foregroundColor(themeManager.textColor(for: colorScheme))
                                     .padding(.top, 26)
                                 Text("Ingredients & Nutrition")
                                     .font(.title2)
                                     .fontWeight(.semibold)
+                                    .foregroundColor(themeManager.textColor(for: colorScheme))
                                 if !meal.ingredients.isEmpty {
                                     ForEach(meal.ingredients.indices, id: \.self) { index in
                                         let ingredient = meal.ingredients[index]
@@ -150,34 +156,40 @@ struct MealDetailsView: View {
                                             Text("\(ingredient.name) (\(ingredient.amount))")
                                                 .font(.subheadline)
                                                 .fontWeight(.semibold)
+                                                .foregroundColor(themeManager.textColor(for: colorScheme))
                                             Text("Calories: \(ingredient.calories) | Protein: \(ingredient.protein) | Carbs: \(ingredient.carbs) | Fats: \(ingredient.fats)")
                                                 .font(.body)
                                                 .lineLimit(1)
                                                 .minimumScaleFactor(0.5)
+                                                .foregroundColor(themeManager.textColor(for: colorScheme))
                                         }
                                         Divider()
-                                            .background(Color.black.opacity(0.3))
+                                            .background(themeManager.textColor(for: colorScheme).opacity(0.3))
                                     }
                                 } else {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("Grilled Chicken Breast (120g)")
                                             .font(.subheadline)
                                             .fontWeight(.semibold)
+                                            .foregroundColor(themeManager.textColor(for: colorScheme))
                                         Text("Calories: 198 kcal | Protein: 37g | Carbs: 0g | Fats: 4g")
                                             .font(.body)
                                             .lineLimit(1)
                                             .minimumScaleFactor(0.5)
+                                            .foregroundColor(themeManager.textColor(for: colorScheme))
                                     }
                                     Divider()
-                                        .background(Color.black.opacity(0.3))
+                                        .background(themeManager.textColor(for: colorScheme).opacity(0.3))
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("Mixed Leafy Greens (50g)")
                                             .font(.subheadline)
                                             .fontWeight(.semibold)
+                                            .foregroundColor(themeManager.textColor(for: colorScheme))
                                         Text("Calories: 15 kcal | Protein: 2g | Carbs: 3g | Fats: 0g")
                                             .font(.body)
                                             .lineLimit(1)
                                             .minimumScaleFactor(0.5)
+                                            .foregroundColor(themeManager.textColor(for: colorScheme))
                                     }
                                 }
                             }
@@ -185,7 +197,7 @@ struct MealDetailsView: View {
                             .offset(y: -30)
                         }
                     }
-                    .background(Color("Background"))
+                    .background(themeManager.backgroundColor(for: colorScheme))
                     
                     // Sticky Bottom Bar
                     HStack {
@@ -209,7 +221,7 @@ struct MealDetailsView: View {
                     }
                     .padding()
                     .frame(maxWidth: .infinity, maxHeight: 150)
-                    .background(Color("Accent"))
+                    .background(themeManager.accentColor(for: colorScheme))
                     .clipShape(RoundedCorner(radius: 20, corners: [.topLeft, .topRight]))
                     .ignoresSafeArea(edges: .bottom)
                 }
@@ -218,16 +230,28 @@ struct MealDetailsView: View {
                 .navigationBarBackButtonHidden()
             } else {
                 // Fallback view when no meal data is available.
-                VStack(spacing: 20) {
-                    Text("\(mealSlot) Details")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    Text("No meal information available.")
-                        .font(.body)
-                    ProgressView()
+                ZStack {
+                    themeManager.backgroundColor(for: colorScheme)
+                        .ignoresSafeArea()
+                    
+                    VStack(spacing: 20) {
+                        Text("\(mealSlot) Details")
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                        Text("No meal information available.")
+                            .font(.body)
+                            .foregroundColor(themeManager.textColor(for: colorScheme))
+                        ProgressView()
+                    }
+                    .padding()
                 }
-                .padding()
             }
         }
     }
+}
+
+#Preview {
+    MealDetailsView(meal: nil, mealSlot: "Meal 1")
+        .environmentObject(ThemeManager())
 }

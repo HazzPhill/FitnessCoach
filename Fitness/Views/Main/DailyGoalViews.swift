@@ -4,6 +4,8 @@ struct DailyGoalsView: View {
     let userId: String  // The authenticated user's ID
     @StateObject private var viewModel: DailyGoalsViewModel
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     
     // Tracks whether we're in "Edit" mode
     @State private var isEditing = false
@@ -16,7 +18,7 @@ struct DailyGoalsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color("Background")
+                themeManager.backgroundColor(for: colorScheme)
                     .ignoresSafeArea()
                 
                 VStack(spacing: 20) {
@@ -24,14 +26,18 @@ struct DailyGoalsView: View {
                         .font(.title)
                         .fontWeight(.semibold)
                         .padding(.top, 16)
-                        .foregroundColor(Color("Accent"))
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                     
                     // A vertical stack of goal fields (without Water)
                     VStack(spacing: 12) {
                         GoalField(label: "Calories", text: $viewModel.dailyCalories, isEditing: $isEditing)
+                            .environmentObject(themeManager)
                         GoalField(label: "Steps", text: $viewModel.dailySteps, isEditing: $isEditing)
+                            .environmentObject(themeManager)
                         GoalField(label: "Protein", text: $viewModel.dailyProtein, isEditing: $isEditing)
+                            .environmentObject(themeManager)
                         GoalField(label: "Training", text: $viewModel.dailyTraining, isEditing: $isEditing)
+                            .environmentObject(themeManager)
                     }
                     .padding(.horizontal)
                     .padding(.top, 12)
@@ -67,9 +73,9 @@ struct DailyGoalsView: View {
                     } label: {
                         Text(isEditing ? "Save Goals" : "Edit")
                             .font(.headline)
-                            .foregroundColor(Color("Background"))
+                            .foregroundColor(themeManager.backgroundColor(for: colorScheme))
                             .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(Color("Accent"))
+                            .background(themeManager.accentColor(for: colorScheme))
                             .cornerRadius(25)
                             .padding(.horizontal)
                     }
@@ -86,30 +92,32 @@ struct GoalField: View {
     let label: String
     @Binding var text: String
     @Binding var isEditing: Bool
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color("BoxStroke"), lineWidth: 2)
-                .background(Color.white)
+                .stroke(Color(hex: "C6C6C6"), lineWidth: 2)
+                .background(themeManager.cardBackgroundColor(for: colorScheme))
                 .cornerRadius(12)
             
             HStack {
                 Text(label)
                     .font(.body)
-                    .foregroundColor(.black)
+                    .foregroundColor(themeManager.textColor(for: colorScheme))
                 Spacer()
                 if isEditing {
                     TextField("", text: $text)
                         .multilineTextAlignment(.trailing)
-                        .foregroundColor(.black)
+                        .foregroundColor(themeManager.textColor(for: colorScheme))
                         .font(.body)
                         .frame(minWidth: 50)
                 } else {
                     HStack(spacing: 4) {
                         Text(text.isEmpty ? "Not set" : text)
                             .font(.body)
-                            .foregroundColor(.black)
+                            .foregroundColor(themeManager.textColor(for: colorScheme))
                         Image(systemName: "pencil")
                             .foregroundColor(.gray)
                     }
@@ -123,5 +131,13 @@ struct GoalField: View {
 }
 
 #Preview {
-    DailyGoalsView(userId: "dummyUserId")
+    Group {
+        DailyGoalsView(userId: "dummyUserId")
+            .environmentObject(ThemeManager())
+            .preferredColorScheme(.light)
+        
+        DailyGoalsView(userId: "dummyUserId")
+            .environmentObject(ThemeManager())
+            .preferredColorScheme(.dark)
+    }
 }

@@ -3,6 +3,8 @@ import PhotosUI
 
 struct DailyCheckinView: View {
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     @StateObject private var viewModel: DailyCheckinsViewModel
     @Environment(\.dismiss) var dismiss
     
@@ -19,84 +21,101 @@ struct DailyCheckinView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section(header: Text("Daily Goals")) {
-                    if viewModel.goalsList.isEmpty {
-                        Text("No goals set. Add goals in your profile settings.")
-                            .foregroundColor(.gray)
-                    } else {
-                        ForEach(viewModel.goalsList) { goal in
-                            Toggle(getGoalDisplayText(goal), isOn: Binding(
-                                get: {
-                                    completedGoals.first(where: { $0.goalId == goal.id })?.completed ?? false
-                                },
-                                set: { newValue in
-                                    if let index = completedGoals.firstIndex(where: { $0.goalId == goal.id }) {
-                                        completedGoals[index].completed = newValue
-                                    } else {
-                                        // Use the formatted display name including the value
-                                        completedGoals.append(CompletedGoal(
-                                            goalId: goal.id,
-                                            name: getGoalDisplayText(goal),
-                                            completed: newValue
-                                        ))
-                                    }
-                                }
-                            ))
-                            .tint(Color("Accent"))
-                        }
-                    }
-                }
+            ZStack {
+                themeManager.backgroundColor(for: colorScheme)
+                    .ignoresSafeArea()
                 
-                Section(header: Text("Notes")) {
-                    TextEditor(text: $notes)
-                        .frame(minHeight: 100)
-                }
-                
-                Section(header: Text("Photos")) {
-                    PhotosPicker(selection: $selectedItems, matching: .images, photoLibrary: .shared()) {
-                        Label("Select Photos", systemImage: "photo.on.rectangle.angled")
-                    }
-                    
-                    if !selectedImages.isEmpty {
-                        ScrollView(.horizontal) {
-                            HStack {
-                                ForEach(0..<selectedImages.count, id: \.self) { index in
-                                    ZStack(alignment: .topTrailing) {
-                                        Image(uiImage: selectedImages[index])
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 100, height: 100)
-                                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                                        
-                                        Button {
-                                            selectedImages.remove(at: index)
-                                            if index < selectedItems.count {
-                                                selectedItems.remove(at: index)
-                                            }
-                                        } label: {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .foregroundColor(.red)
-                                                .background(Circle().fill(Color.white))
+                Form {
+                    Section(header: Text("Daily Goals")
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
+                        if viewModel.goalsList.isEmpty {
+                            Text("No goals set. Add goals in your profile settings.")
+                                .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
+                        } else {
+                            ForEach(viewModel.goalsList) { goal in
+                                Toggle(getGoalDisplayText(goal), isOn: Binding(
+                                    get: {
+                                        completedGoals.first(where: { $0.goalId == goal.id })?.completed ?? false
+                                    },
+                                    set: { newValue in
+                                        if let index = completedGoals.firstIndex(where: { $0.goalId == goal.id }) {
+                                            completedGoals[index].completed = newValue
+                                        } else {
+                                            // Use the formatted display name including the value
+                                            completedGoals.append(CompletedGoal(
+                                                goalId: goal.id,
+                                                name: getGoalDisplayText(goal),
+                                                completed: newValue
+                                            ))
                                         }
-                                        .offset(x: 6, y: -6)
                                     }
-                                    .padding(4)
-                                }
+                                ))
+                                .tint(themeManager.accentColor(for: colorScheme))
+                                .foregroundColor(themeManager.textColor(for: colorScheme))
                             }
                         }
-                        .frame(height: 120)
+                    }
+                    .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
+                    
+                    Section(header: Text("Notes")
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
+                        TextEditor(text: $notes)
+                            .frame(minHeight: 100)
+                            .foregroundColor(themeManager.textColor(for: colorScheme))
+                    }
+                    .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
+                    
+                    Section(header: Text("Photos")
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
+                        PhotosPicker(selection: $selectedItems, matching: .images, photoLibrary: .shared()) {
+                            Label("Select Photos", systemImage: "photo.on.rectangle.angled")
+                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                        }
+                        
+                        if !selectedImages.isEmpty {
+                            ScrollView(.horizontal) {
+                                HStack {
+                                    ForEach(0..<selectedImages.count, id: \.self) { index in
+                                        ZStack(alignment: .topTrailing) {
+                                            Image(uiImage: selectedImages[index])
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 100, height: 100)
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                            
+                                            Button {
+                                                selectedImages.remove(at: index)
+                                                if index < selectedItems.count {
+                                                    selectedItems.remove(at: index)
+                                                }
+                                            } label: {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .foregroundColor(.red)
+                                                    .background(Circle().fill(Color.white))
+                                            }
+                                            .offset(x: 6, y: -6)
+                                        }
+                                        .padding(4)
+                                    }
+                                }
+                            }
+                            .frame(height: 120)
+                        }
+                    }
+                    .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
+                    
+                    if let errorMessage = errorMessage {
+                        Section {
+                            Text(errorMessage)
+                                .foregroundColor(.red)
+                        }
+                        .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     }
                 }
-                
-                if let errorMessage = errorMessage {
-                    Section {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                    }
-                }
+                .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Daily Check-in")
+            .navigationTitle("")
+            // Using the standard toolbar for now as the modifier can cause conflicts
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     if isSubmitting {
@@ -106,12 +125,14 @@ struct DailyCheckinView: View {
                             submitCheckin()
                         }
                         .disabled(viewModel.goalsList.isEmpty)
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                     }
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                 }
             }
             .onChange(of: selectedItems) { newValue in
@@ -195,4 +216,5 @@ struct DailyCheckinView: View {
 #Preview {
     DailyCheckinView(userId: "dummyUserId")
         .environmentObject(AuthManager.shared)
+        .environmentObject(ThemeManager())
 }

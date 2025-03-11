@@ -12,7 +12,7 @@ import Firebase
 @main
 struct FitnessApp: App {
     @StateObject private var authManager = AuthManager.shared
-    
+    @StateObject private var themeManager = ThemeManager()
     
     init() {
         FirebaseApp.configure()
@@ -30,6 +30,7 @@ struct FitnessApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(authManager)
+                .environmentObject(themeManager)
         }
     }
 }

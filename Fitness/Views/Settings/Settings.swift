@@ -3,6 +3,8 @@ import PhotosUI
 
 struct SettingsView: View {
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     
     // MARK: For coaches: Group settings state
     @State private var groupName: String = ""
@@ -13,7 +15,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color("Background")
+                themeManager.backgroundColor(for: colorScheme)
                     .ignoresSafeArea()
                 
                 VStack(spacing: 16) {
@@ -21,7 +23,7 @@ struct SettingsView: View {
                     if authManager.currentUser?.role == .client {
                         ZStack {
                             RoundedRectangle(cornerRadius: 12)
-                                .foregroundColor(Color("Accent"))
+                                .foregroundColor(themeManager.accentColor(for: colorScheme))
                                 .frame(height: 60)
                             if let latestWeight = authManager.latestUpdates.first?.weight {
                                 Text("\(latestWeight, specifier: "%.1f") KG")
@@ -40,21 +42,71 @@ struct SettingsView: View {
                     Form {
                         // MARK: Navigation Links Section
                         Section {
-                            NavigationLink("Account Settings", destination: AccountSettings())
-                            NavigationLink("Security", destination: SecuritySettings())
+                            NavigationLink("Account Settings", destination: AccountSettings()
+                                .environmentObject(themeManager))
+                            .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
+                            NavigationLink("Security", destination: SecuritySettings()
+                                .environmentObject(themeManager))
+                            .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                         }
-                        .listRowBackground(Color.white)
+                        .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
+                        
+                        // MARK: Customization Section
+                        Section(header: Text("Customisation")
+                            .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
+                                    .fontWeight(.bold)) {
+                            
+                                        AnimatedThemePicker(selectedTheme: $themeManager.selectedTheme, themeManager: themeManager)
+                                            .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
+                                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                            
+                            // Color scheme selection
+                            NavigationLink(destination: ColorSchemeSelectionView()
+                                .environmentObject(themeManager)) {
+                                HStack {
+                                    Text("Color Scheme")
+                                        .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
+                                    Spacer()
+                                    
+                                    // Preview of current scheme
+                                    HStack(spacing: 4) {
+                                        // Background preview
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .fill(themeManager.backgroundColor(for: colorScheme))
+                                            .frame(width: 20, height: 20)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 4)
+                                                    .stroke(Color.gray, lineWidth: 1)
+                                            )
+                                        
+                                        // Accent preview
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .fill(themeManager.accentColor(for: colorScheme))
+                                            .frame(width: 20, height: 20)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 4)
+                                                    .stroke(Color.gray, lineWidth: 1)
+                                            )
+                                    }
+                                    .padding(.trailing, 4)
+                                    
+                                    Text(themeManager.activeColorScheme(for: colorScheme).displayName)
+                                        .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
+                                }
+                            }
+                            .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
+                        }
                         
                         // MARK: Group Settings (Coach Only)
                         if authManager.currentUser?.role == .coach {
                             Section(header: Text("Group Settings")
-                                        .foregroundColor(Color("Accent"))
+                                        .foregroundColor(themeManager.accentColor(for: colorScheme))
                                         .fontWeight(.bold)) {
                                 TextField("Group Name", text: $groupName)
                                     .onAppear {
                                         groupName = authManager.currentGroup?.name ?? ""
                                     }
-                                    .listRowBackground(Color.white)
+                                    .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                                 
                                 HStack(spacing: 16) {
                                     // Display the group photo:
@@ -64,7 +116,7 @@ struct SettingsView: View {
                                             .scaledToFill()
                                             .frame(width: 80, height: 80)
                                             .clipShape(RoundedRectangle(cornerRadius: 12))
-                                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color("Accent"), lineWidth: 2))
+                                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(themeManager.accentColor(for: colorScheme), lineWidth: 2))
                                     } else if let groupImageUrl = authManager.currentGroup?.groupImageUrl,
                                               let url = URL(string: groupImageUrl) {
                                         AsyncImage(url: url) { phase in
@@ -84,22 +136,22 @@ struct SettingsView: View {
                                         }
                                         .frame(width: 80, height: 80)
                                         .clipped()
-                                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color("Accent"), lineWidth: 2))
+                                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(themeManager.accentColor(for: colorScheme), lineWidth: 2))
                                     } else {
                                         Image("defaultGroup")
                                             .resizable()
                                             .scaledToFill()
                                             .frame(width: 80, height: 80)
                                             .clipShape(RoundedRectangle(cornerRadius: 12))
-                                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color("Accent"), lineWidth: 2))
+                                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(themeManager.accentColor(for: colorScheme), lineWidth: 2))
                                     }
                                     
                                     Button("Change Group Photo") {
                                         showingGroupImagePicker = true
                                     }
-                                    .foregroundColor(.blue)
+                                    .foregroundColor(themeManager.accentColor(for: colorScheme))
                                 }
-                                .listRowBackground(Color.white)
+                                .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                                 
                                 Button("Show Share Code") {
                                     if let code = authManager.currentGroup?.code {
@@ -110,8 +162,8 @@ struct SettingsView: View {
                                         }
                                     }
                                 }
-                                .foregroundColor(.blue)
-                                .listRowBackground(Color.white)
+                                .foregroundColor(themeManager.accentColor(for: colorScheme))
+                                .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                             }
                         }
                         
@@ -126,7 +178,7 @@ struct SettingsView: View {
                             }
                             .foregroundColor(.red)
                         }
-                        .listRowBackground(Color.white)
+                        .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     }
                     .scrollContentBackground(.hidden)
                 }
@@ -151,5 +203,6 @@ struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
         SettingsView()
             .environmentObject(AuthManager.shared)
+            .environmentObject(ThemeManager())
     }
 }

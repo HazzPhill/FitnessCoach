@@ -1,81 +1,33 @@
 import SwiftUI
 import PhotosUI
 
-struct ModernButton: View {
+// Import ModernButton component with a custom button
+struct LocalModernButton: View {
     let label: String
     let action: () -> Void
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         Button(action: action) {
             Text(label)
                 .font(.headline)
-                .foregroundColor(Color("Background"))
+                .foregroundColor(Color.white)
                 .frame(maxWidth: .infinity, minHeight: 50)
-                .background(Color("Accent"))
+                .background(themeManager.accentColor(for: colorScheme))
                 .cornerRadius(25)
                 .padding(.horizontal)
         }
     }
 }
 
-// MARK: - IngredientAccordionView
-struct IngredientAccordionView: View {
-    @Binding var ingredient: Ingredient
-    @Binding var isExpanded: Bool
-    let onDelete: () -> Void
-
-    var body: some View {
-        DisclosureGroup(
-            isExpanded: $isExpanded,
-            content: {
-                VStack(alignment: .leading, spacing: 10) {
-                    ModernTextField(placeholder: "Amount", text: $ingredient.amount)
-                    ModernTextField(placeholder: "Protein", text: $ingredient.protein)
-                    ModernTextField(placeholder: "Calories", text: $ingredient.calories)
-                    ModernTextField(placeholder: "Carbs", text: $ingredient.carbs)
-                    ModernTextField(placeholder: "Fats", text: $ingredient.fats)
-                }
-                .padding(.vertical, 5)
-            },
-            label: {
-                HStack {
-                    ModernTextField(placeholder: "Ingredient Name", text: $ingredient.name)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Button(action: onDelete) {
-                        Image(systemName: "trash.circle.fill")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 24, height: 24)
-                            .foregroundColor(Color("Warning"))
-                            .background(Color.white.opacity(0.2))
-                            .clipShape(Circle())
-                    }
-                    .padding(.trailing, 8)
-                    // Custom chevron arrow using SF Symbols
-                    Image(systemName: isExpanded ? "chevron.down.circle.fill" : "chevron.right.circle.fill")
-                        .foregroundColor(Color("SecondaryAccent"))
-                        .scaledToFit()
-                        .frame(width: 24, height: 24)
-                        .onTapGesture {
-                            withAnimation {
-                                isExpanded.toggle()
-                            }
-                        }
-                }
-            }
-        )
-        .accentColor(.clear) // Hide the default arrow.
-        .padding(.vertical, 5)
-        .background(Color.white.opacity(0.1))
-        .cornerRadius(8)
-    }
-}
-
-// MARK: - UploadMealPlanView
 struct UploadMealPlanView: View {
     var clientId: String    // The client's ID for whom this meal is being uploaded.
     var day: String         // e.g. "Monday"
     var mealSlot: String    // e.g. "Meal 1" or "Snack 1" (renamed from mealType)
+    
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     
     @State private var mealName: String = ""
     @State private var selectedImage: UIImage? = nil
@@ -87,7 +39,7 @@ struct UploadMealPlanView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color("Background")
+                themeManager.backgroundColor(for: colorScheme)
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -96,17 +48,18 @@ struct UploadMealPlanView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Meal Information")
                                 .font(.headline)
-                                .foregroundColor(Color("SecondaryAccent"))
+                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
                             ModernTextField(placeholder: "Meal Name", text: $mealName)
+                                .environmentObject(themeManager)
                         }
                         
                         // Meal Image Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Meal Image")
                                 .font(.headline)
-                                .foregroundColor(Color("SecondaryAccent"))
+                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
                             if let image = selectedImage {
@@ -122,14 +75,14 @@ struct UploadMealPlanView: View {
                                     isImagePickerPresented = true
                                 }) {
                                     Text("Select Image")
-                                        .foregroundColor(Color("SecondaryAccent"))
+                                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                         .padding()
                                         .frame(maxWidth: .infinity)
-                                        .background(Color("Accent").opacity(0.1))
+                                        .background(themeManager.accentColor(for: colorScheme).opacity(0.1))
                                         .cornerRadius(8)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 8)
-                                                .stroke(Color("Accent"), lineWidth: 1)
+                                                .stroke(themeManager.accentColor(for: colorScheme), lineWidth: 1)
                                         )
                                         .padding(.horizontal)
                                 }
@@ -140,7 +93,7 @@ struct UploadMealPlanView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Ingredients")
                                 .font(.headline)
-                                .foregroundColor(Color("SecondaryAccent"))
+                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
                             ForEach(ingredients.indices, id: \.self) { index in
@@ -166,6 +119,7 @@ struct UploadMealPlanView: View {
                                         }
                                     }
                                 )
+                                .environmentObject(themeManager)
                             }
                             
                             Button(action: {
@@ -177,21 +131,21 @@ struct UploadMealPlanView: View {
                                     Image(systemName: "plus.circle")
                                     Text("Add Ingredient")
                                 }
-                                .foregroundColor(Color("Accent"))
+                                .foregroundColor(themeManager.accentColor(for: colorScheme))
                                 .padding()
                                 .frame(maxWidth: .infinity)
-                                .background(Color.white.opacity(0.1))
+                                .background(themeManager.cardBackgroundColor(for: colorScheme).opacity(0.3))
                                 .cornerRadius(8)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 8)
-                                        .stroke(Color("Accent"), lineWidth: 1)
+                                        .stroke(themeManager.accentColor(for: colorScheme), lineWidth: 1)
                                 )
                                 .padding(.horizontal)
                             }
                         }
                         
                         // Upload Button Section
-                        ModernButton(label: "Upload Meal Plan") {
+                        LocalModernButton(label: "Upload Meal Plan") {
                             Task {
                                 do {
                                     try await MealPlanManager.shared.updateDailyMealPlan(
@@ -209,6 +163,7 @@ struct UploadMealPlanView: View {
                                 }
                             }
                         }
+                        .environmentObject(themeManager)
                         
                         // Upload status message
                         if !uploadStatus.isEmpty {
@@ -233,5 +188,67 @@ struct UploadMealPlanView: View {
 struct UploadMealPlanView_Previews: PreviewProvider {
     static var previews: some View {
         UploadMealPlanView(clientId: "dummyClientId", day: "Monday", mealSlot: "Meal 1")
+            .environmentObject(ThemeManager())
+    }
+}
+
+// MARK: - IngredientAccordionView
+struct IngredientAccordionView: View {
+    @Binding var ingredient: Ingredient
+    @Binding var isExpanded: Bool
+    let onDelete: () -> Void
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
+
+    var body: some View {
+        DisclosureGroup(
+            isExpanded: $isExpanded,
+            content: {
+                VStack(alignment: .leading, spacing: 10) {
+                    ModernTextField(placeholder: "Amount", text: $ingredient.amount)
+                        .environmentObject(themeManager)
+                    ModernTextField(placeholder: "Protein", text: $ingredient.protein)
+                        .environmentObject(themeManager)
+                    ModernTextField(placeholder: "Calories", text: $ingredient.calories)
+                        .environmentObject(themeManager)
+                    ModernTextField(placeholder: "Carbs", text: $ingredient.carbs)
+                        .environmentObject(themeManager)
+                    ModernTextField(placeholder: "Fats", text: $ingredient.fats)
+                        .environmentObject(themeManager)
+                }
+                .padding(.vertical, 5)
+            },
+            label: {
+                HStack {
+                    ModernTextField(placeholder: "Ingredient Name", text: $ingredient.name)
+                        .environmentObject(themeManager)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button(action: onDelete) {
+                        Image(systemName: "trash.circle.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 24, height: 24)
+                            .foregroundColor(Color.red)
+                            .background(Color.white.opacity(0.2))
+                            .clipShape(Circle())
+                    }
+                    .padding(.trailing, 8)
+                    // Custom chevron arrow using SF Symbols
+                    Image(systemName: isExpanded ? "chevron.down.circle.fill" : "chevron.right.circle.fill")
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                        .scaledToFit()
+                        .frame(width: 24, height: 24)
+                        .onTapGesture {
+                            withAnimation {
+                                isExpanded.toggle()
+                            }
+                        }
+                }
+            }
+        )
+        .accentColor(.clear) // Hide the default arrow.
+        .padding(.vertical, 5)
+        .background(themeManager.cardBackgroundColor(for: colorScheme).opacity(0.3))
+        .cornerRadius(8)
     }
 }

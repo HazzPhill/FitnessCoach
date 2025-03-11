@@ -1,14 +1,9 @@
-//
-//  DailyCheckinPreview.swift
-//  Fitness
-//
-//  Created by Harry Phillips on 07/03/2025.
-//
-
 import SwiftUI
 
 struct DailyCheckinPreview: View {
     var checkin: DailyCheckin
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     
     private var completedGoalsCount: Int {
         return checkin.completedGoals.filter { $0.completed }.count
@@ -66,14 +61,14 @@ struct DailyCheckinPreview: View {
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Color("Accent").opacity(0.2))
+                        .fill(themeManager.accentColor(for: colorScheme).opacity(0.2))
                         .frame(width: 60, height: 83)
                     
                     Image(systemName: "checkmark.circle")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 30, height: 30)
-                        .foregroundColor(Color("Accent"))
+                        .foregroundColor(themeManager.accentColor(for: colorScheme))
                 }
             }
             
@@ -82,16 +77,16 @@ struct DailyCheckinPreview: View {
                 HStack {
                     Text(formattedDay(from: checkin.date))
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.black)
+                        .foregroundColor(themeManager.textColor(for: colorScheme))
                     Spacer()
                     Text(formattedDate(from: checkin.date))
                         .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(.black)
+                        .foregroundColor(themeManager.textColor(for: colorScheme))
                 }
                 
                 Text("\(completedGoalsCount)/\(totalGoalsCount) Goals Completed")
                     .font(.system(size: 14, weight: .regular))
-                    .foregroundColor(Color("Accent"))
+                    .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                 
                 // Progress bar
                 GeometryReader { geometry in
@@ -102,7 +97,7 @@ struct DailyCheckinPreview: View {
                             .cornerRadius(3)
                         
                         Rectangle()
-                            .fill(Color("Accent"))
+                            .fill(themeManager.accentOrWhiteText(for: colorScheme))
                             .frame(width: geometry.size.width * CGFloat(completion), height: 6)
                             .cornerRadius(3)
                     }
@@ -114,9 +109,9 @@ struct DailyCheckinPreview: View {
         .padding()
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color("BoxStroke"), lineWidth: 3)
+                .stroke(Color(hex: "C6C6C6"), lineWidth: 3)
         )
-        .background(Color.white)
+        .background(themeManager.cardBackgroundColor(for: colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
@@ -139,4 +134,5 @@ struct DailyCheckinPreview: View {
     )
     
     return DailyCheckinPreview(checkin: checkin)
+        .environmentObject(ThemeManager())
 }

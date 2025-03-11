@@ -239,16 +239,15 @@ class AuthManager: ObservableObject {
         }
     }
     
-    // Replace this function in your AuthManager
     func setupDailyCheckinsListener(uid: String) {
-        // Clean up existing listener if there is one
+        // Clean up existing listener
         dailyCheckinsListener?.remove()
         
         // Set up a new listener
         dailyCheckinsListener = db.collection("daily_checkins")
             .whereField("userId", isEqualTo: uid)
             .order(by: "date", descending: true)
-            .limit(to: 10)  // Increased from 5 to show more check-ins
+            .limit(to: 10)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
                 
@@ -257,26 +256,28 @@ class AuthManager: ObservableObject {
                     return
                 }
                 
-                // Check for snapshot validity
                 guard let snapshot = snapshot else {
                     print("Invalid snapshot returned for daily check-ins")
                     return
                 }
                 
-                print("Daily check-ins snapshot received with \(snapshot.documents.count) documents")
+                // Important: Explicitly handle empty snapshot case
+                if snapshot.documents.isEmpty {
+                    print("No documents found in daily check-ins snapshot")
+                    DispatchQueue.main.async {
+                        withAnimation {
+                            self.dailyCheckins = []
+                        }
+                    }
+                    return
+                }
                 
                 do {
-                    // Map Firestore documents to DailyCheckin objects
                     let checkins = try snapshot.documents.compactMap { doc -> DailyCheckin? in
-                        // Print doc data for debugging
-                        print("Processing check-in document: \(doc.documentID)")
-                        
                         return try doc.data(as: DailyCheckin.self)
                     }
                     
-                    // Update on the main thread to ensure UI updates
                     DispatchQueue.main.async {
-                        // Use animation to make the update smoother
                         withAnimation {
                             self.dailyCheckins = checkins
                         }

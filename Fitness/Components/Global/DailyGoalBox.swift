@@ -4,6 +4,8 @@ struct DailyGoalBox: View {
     var label: String
     var value: String
     var userId: String // Add this parameter
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -13,18 +15,18 @@ struct DailyGoalBox: View {
                 VStack(alignment: .leading){
                     Text(value)
                         .font(.system(size: 24, weight: .semibold))
-                        .foregroundColor(.black)
+                        .foregroundColor(themeManager.textColor(for: colorScheme))
                     Text(label)
                         .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(.black.opacity(0.5))
+                        .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.5))
                 }
                 .padding()
-                .frame(maxWidth:.infinity, minHeight: 75,alignment: .leading)
+                .frame(maxWidth:.infinity, minHeight: 75, alignment: .leading)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color("BoxStroke"), lineWidth: 3)
+                        .stroke(Color(hex: "C6C6C6"), lineWidth: 3)
                 )
-                .background(Color.white)
+                .background(themeManager.cardBackgroundColor(for: colorScheme))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
         }
@@ -33,4 +35,5 @@ struct DailyGoalBox: View {
 
 #Preview {
     DailyGoalBox(label: "Calories", value: "2000", userId: "12345")
+        .environmentObject(ThemeManager())
 }

@@ -20,19 +20,29 @@ struct ModernTextField: View {
     var placeholder: String
     @Binding var text: String
     var keyboardType: UIKeyboardType = .default
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        TextField(placeholder, text: $text)
-            .keyboardType(keyboardType)
-            .padding()
-            .background(Color.white.opacity(0.1))
-            .foregroundColor(.black)
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color("Accent"), lineWidth: 1)
-            )
-            .padding(.horizontal)
+        ZStack(alignment: .leading) {
+            if text.isEmpty {
+                Text(placeholder)
+                    .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.5))
+                    .padding(.horizontal)
+            }
+            
+            TextField("", text: $text)
+                .keyboardType(keyboardType)
+                .padding()
+                .background(themeManager.cardBackgroundColor(for: colorScheme))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
+                )
+                .foregroundColor(themeManager.textColor(for: colorScheme))
+        }
+        .padding(.horizontal)
     }
 }
 

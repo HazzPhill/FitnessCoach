@@ -7,6 +7,9 @@ import CoreHaptics
 struct ClientHome: View {
     let client: AuthManager.DBUser
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
+    
     @State private var showingAddUpdate = false  // For weekly check-ins
     @State private var showingAddDailyCheckin = false // For daily check-ins
     @State private var refreshDailyCheckins = false // Trigger for refreshing daily check-ins
@@ -15,19 +18,21 @@ struct ClientHome: View {
     @Namespace private var updatezoom
     @Namespace private var checkinNamespace
     
+    @State private var hapticFeedback = UIImpactFeedbackGenerator(style: .rigid)
 
     @State private var engine: CHHapticEngine?
+    @State private var currentVisibleDay: String = ""
     
     // Initialize the weight view model with the current user's ID
-        init(client: AuthManager.DBUser) {
-            self.client = client
-            _weightViewModel = StateObject(wrappedValue: WeightEntriesViewModel(userId: client.userId))
-        }
+    init(client: AuthManager.DBUser) {
+        self.client = client
+        _weightViewModel = StateObject(wrappedValue: WeightEntriesViewModel(userId: client.userId))
+    }
     
     var body: some View {
         NavigationStack {
             ZStack {
-                Color("Background")
+                themeManager.backgroundColor(for: colorScheme)
                     .ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
@@ -36,7 +41,8 @@ struct ClientHome: View {
                             Text("Welcome \(authManager.currentUser?.firstName ?? "")")
                                 .font(.title)
                                 .fontWeight(.semibold)
-                                .foregroundStyle(Color("Accent"))
+                                .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
+                                .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
                             Spacer()
                             NavigationLink {
                                 SettingsView()
@@ -75,39 +81,55 @@ struct ClientHome: View {
                         Text("Your Progress")
                             .font(.title2)
                             .fontWeight(.regular)
-                            .foregroundStyle(.black)
+                            .foregroundStyle(themeManager.textColor(for: colorScheme))
                         
                         WeightGraphView(weightEntries: weightViewModel.weightEntries)
+                            .environmentObject(themeManager)
                         
                         // Daily Goals Grid Section
                         Text("Daily Goals")
                             .font(.title2)
                             .fontWeight(.regular)
-                            .foregroundStyle(.black)
+                            .foregroundStyle(themeManager.textColor(for: colorScheme))
                         DailyGoalsGridView(userId: client.userId)
+                            .environmentObject(themeManager)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(themeManager.backgroundColor(for: colorScheme))
+                            )
                         
                         Text("Your Plan")
                             .font(.title2)
                             .fontWeight(.regular)
-                            .foregroundStyle(.black)
+                            .foregroundStyle(themeManager.textColor(for: colorScheme))
     
-                        // Then update your ScrollView with a ScrollViewReader
+                        // Then update your ScrollView with this implementation
                         ScrollViewReader { scrollProxy in
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 20) {
                                     ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { day in
                                         GeometryReader { geometry in
                                             DayMealPlanCard(day: day,
-                                                            clientId: client.userId,
-                                                            isCoach: false)
+                                                           clientId: client.userId,
+                                                           isCoach: false)
+                                            .environmentObject(themeManager)
                                             .simultaneousGesture(TapGesture().onEnded {
                                                 let generator = UIImpactFeedbackGenerator(style: .light)
                                                 generator.impactOccurred()
                                             })
                                             .scaleEffect(getScaleAmount(geometry: geometry))
                                             .animation(.easeOut(duration: 0.15), value: geometry.frame(in: .global).midX)
+                                            // Check if this card is the most visible and update currentVisibleDay
+                                            .onChange(of: isMostVisible(geometry: geometry)) { isMostVisible in
+                                                if isMostVisible && currentVisibleDay != day {
+                                                    currentVisibleDay = day
+                                                    hapticFeedback.impactOccurred(intensity: 1.2)
+                                                    print("Now visible: \(day)")
+                                                }
+                                            }
                                         }
-                                        .id(day) // Important: Add an ID for the scrollTo function
+                                        .id(day)
                                         .frame(width: 260, height: 400)
                                     }
                                 }
@@ -116,9 +138,13 @@ struct ClientHome: View {
                             }
                             .scrollIndicators(.hidden)
                             .onAppear {
+                                // Initialize haptic engine
+                                hapticFeedback.prepare()
+                                
                                 // Scroll to current day with animation when view appears
                                 withAnimation {
                                     scrollProxy.scrollTo(currentDay, anchor: .leading)
+                                    currentVisibleDay = currentDay  // Initialize current visible day
                                 }
                             }
                         }
@@ -128,7 +154,7 @@ struct ClientHome: View {
                             Text("Daily Check-ins")
                                 .font(.title2)
                                 .fontWeight(.regular)
-                                .foregroundStyle(.black)
+                                .foregroundStyle(themeManager.textColor(for: colorScheme))
                             Spacer()
                             Button {
                                 showingAddDailyCheckin = true
@@ -137,7 +163,7 @@ struct ClientHome: View {
                             } label: {
                                 Circle()
                                     .frame(width: 30, height: 30)
-                                    .foregroundStyle(Color("Accent"))
+                                    .foregroundStyle(themeManager.accentColor(for: colorScheme))
                                     .overlay(
                                         Image(systemName: "plus")
                                             .foregroundStyle(.white)
@@ -149,17 +175,20 @@ struct ClientHome: View {
                         LazyVStack(spacing: 16) {
                             if authManager.dailyCheckins.isEmpty {
                                 Text("No daily check-ins yet.")
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                                     .padding()
                                     .frame(maxWidth: .infinity, alignment: .center)
+                                    .id("empty-checkins") // Add a stable ID to force refresh
                             } else {
                                 ForEach(authManager.dailyCheckins) { checkin in
                                     NavigationLink {
                                         DailyCheckinDetailView(checkin: checkin)
                                             .environmentObject(authManager)
+                                            .environmentObject(themeManager)
                                             .navigationTransition(.zoom(sourceID: checkin.id ?? "", in: checkinNamespace))
                                     } label: {
                                         DailyCheckinPreview(checkin: checkin)
+                                            .environmentObject(themeManager)
                                             .matchedTransitionSource(id: checkin.id ?? "", in: checkinNamespace)
                                             .transition(.opacity.combined(with: .move(edge: .top)))
                                             .simultaneousGesture(TapGesture().onEnded {
@@ -182,14 +211,14 @@ struct ClientHome: View {
                             Text("Check-ins")
                                 .font(.title2)
                                 .fontWeight(.regular)
-                                .foregroundStyle(.black)
+                                .foregroundStyle(themeManager.textColor(for: colorScheme))
                             Spacer()
                             Button {
                                 showingAddUpdate = true
                             } label: {
                                 Circle()
                                     .frame(width: 30, height: 30)
-                                    .foregroundStyle(Color("Accent"))
+                                    .foregroundStyle(themeManager.accentColor(for: colorScheme))
                                     .overlay(
                                         Image(systemName: "plus")
                                             .foregroundStyle(.white)
@@ -201,12 +230,13 @@ struct ClientHome: View {
                         ScrollView {
                             if authManager.latestUpdates.isEmpty {
                                 Text("No check-ins yet.")
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                                     .padding()
                             } else {
                                 ForEach(authManager.latestUpdates) { update in
                                     NavigationLink {
                                         UpdateDetailView(update: update)
+                                            .environmentObject(themeManager)
                                             .navigationTransition(.zoom(sourceID: update.id, in: namespace))
                                     } label: {
                                         UpdatePreview(
@@ -215,6 +245,7 @@ struct ClientHome: View {
                                             date: update.date ?? Date(),
                                             imageUrl: update.imageUrl
                                         )
+                                        .environmentObject(themeManager)
                                         .matchedTransitionSource(id: update.id, in: namespace)
                                     }
                                     .buttonStyle(.plain)
@@ -229,15 +260,16 @@ struct ClientHome: View {
                         
                         NavigationLink(destination: allUpdatesView()
                                         .environmentObject(authManager)
+                                        .environmentObject(themeManager)
                                         .navigationTransition(.zoom(sourceID: "allUpdates", in: updatezoom))) {
                             Text("View All")
                                 .frame(maxWidth: .infinity)
                                 .font(.headline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(Color("White"))
+                                .foregroundColor(Color.white)
                                 .padding(.vertical, 12)
                                 .padding(.horizontal, 24)
-                                .background(Color("Accent"))
+                                .background(themeManager.accentColor(for: colorScheme))
                                 .clipShape(Capsule())
                                 .matchedTransitionSource(id: "allUpdates", in: updatezoom)
                         }
@@ -255,11 +287,13 @@ struct ClientHome: View {
             }) {
                 DailyCheckinView(userId: client.userId)
                     .environmentObject(authManager)
+                    .environmentObject(themeManager)
             }
             // Weekly check-in sheet
             .sheet(isPresented: $showingAddUpdate) {
                 AddUpdateView()
                     .environmentObject(authManager)
+                    .environmentObject(themeManager)
             }
             .onAppear {
                 // Make sure daily check-ins are refreshed when the view appears
@@ -282,8 +316,10 @@ struct ClientHome: View {
     )
     ClientHome(client: dummyClient)
         .environmentObject(AuthManager.shared)
+        .environmentObject(ThemeManager())
 }
 
+// Keep the existing helper functions
 private func getScaleAmount(geometry: GeometryProxy) -> CGFloat {
     let midPoint = UIScreen.main.bounds.width / 2
     let viewMidPoint = geometry.frame(in: .global).midX
@@ -304,4 +340,13 @@ private var currentDay: String {
     let dayString = dateFormatter.string(from: Date())
     // Convert to format that matches your data (first 3 letters)
     return String(dayString.prefix(3))
+}
+
+// Function to determine if a card is the most visible one in the view
+private func isMostVisible(geometry: GeometryProxy) -> Bool {
+    let midPoint = UIScreen.main.bounds.width / 2
+    let cardMidPoint = geometry.frame(in: .global).midX
+    
+    // This card is considered "most visible" if it's within 50 points of the center
+    return abs(cardMidPoint - midPoint) < 50
 }

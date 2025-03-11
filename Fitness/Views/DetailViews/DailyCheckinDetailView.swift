@@ -1,10 +1,3 @@
-//
-//  DailyCheckinDetailView.swift
-//  Fitness
-//
-//  Created by Harry Phillips on 07/03/2025.
-//
-
 import SwiftUI
 import CachedAsyncImage
 
@@ -15,6 +8,8 @@ struct DailyCheckinDetailView: View {
     @State private var imageTimer: Timer? = nil
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     
     // Check if current user is the owner of this check-in
     private var isOwner: Bool {
@@ -87,7 +82,7 @@ struct DailyCheckinDetailView: View {
                     Text(formattedDay(from: checkin.date))
                         .font(.title2)
                         .fontWeight(.semibold)
-                        .foregroundColor(Color("SecondaryAccent"))
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                     
                     Spacer()
                     
@@ -95,7 +90,7 @@ struct DailyCheckinDetailView: View {
                         if let date = checkin.date {
                             Text(date.formattedWithOrdinal())
                                 .font(.footnote)
-                                .foregroundColor(Color("SecondaryAccent"))
+                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                         }
                         
                         // Edit button only shown if user owns this check-in
@@ -105,7 +100,7 @@ struct DailyCheckinDetailView: View {
                             } label: {
                                 Image(systemName: "pencil.circle.fill")
                                     .font(.title3)
-                                    .foregroundColor(Color("Accent"))
+                                    .foregroundColor(themeManager.accentColor(for: colorScheme))
                             }
                         }
                     }
@@ -117,13 +112,18 @@ struct DailyCheckinDetailView: View {
                     InfoBoxView(
                         title: "Goals Completed",
                         value: "\(completedGoalsCount)/\(totalGoalsCount)",
-                        valueColor: Color("Accent")
+                        valueColor: themeManager.accentOrWhiteText(for: colorScheme)
                     )
+                    .environmentObject(themeManager)
+                    
                     InfoBoxView(
                         title: "Completion Rate",
                         value: String(format: "%.0f%%", Double(completedGoalsCount) / Double(totalGoalsCount) * 100),
-                        valueColor: completedGoalsCount == totalGoalsCount ? Color("Accent") : Color("SecondaryAccent")
+                        valueColor: completedGoalsCount == totalGoalsCount ?
+                            themeManager.accentOrWhiteText(for: colorScheme) :
+                            themeManager.accentOrWhiteText(for: colorScheme).opacity(0.7)
                     )
+                    .environmentObject(themeManager)
                 }
                 .padding(.horizontal)
                 
@@ -132,7 +132,7 @@ struct DailyCheckinDetailView: View {
                     HStack {
                         Text("Goals")
                             .font(.headline)
-                            .foregroundColor(Color("SecondaryAccent"))
+                            .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                         Spacer()
                     }
                     
@@ -140,20 +140,20 @@ struct DailyCheckinDetailView: View {
                     ForEach(checkin.completedGoals) { goal in
                         HStack {
                             Image(systemName: goal.completed ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(goal.completed ? Color("Accent") : .gray)
+                                .foregroundColor(goal.completed ? themeManager.accentOrWhiteText(for: colorScheme) : .gray)
                             Text(goal.name)
-                                .foregroundColor(goal.completed ? .primary : .gray)
+                                .foregroundColor(goal.completed ?themeManager.accentOrWhiteText(for: colorScheme) : .gray)
                             Spacer()
                         }
                         .padding(.vertical, 4)
                     }
                 }
                 .padding()
-                .background(Color.white)
+                .background(themeManager.cardBackgroundColor(for: colorScheme))
                 .cornerRadius(12)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color("BoxStroke"), lineWidth: 1)
+                        .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
                 )
                 .padding(.horizontal)
                 
@@ -163,6 +163,7 @@ struct DailyCheckinDetailView: View {
                         title: "Notes",
                         text: notes
                     )
+                    .environmentObject(themeManager)
                     .padding(.horizontal)
                 }
                 
@@ -171,7 +172,7 @@ struct DailyCheckinDetailView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Photos")
                             .font(.headline)
-                            .foregroundColor(Color("SecondaryAccent"))
+                            .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                             .padding(.horizontal)
                         
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -192,7 +193,7 @@ struct DailyCheckinDetailView: View {
                                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                                     .overlay(
                                                         RoundedRectangle(cornerRadius: 12)
-                                                            .stroke(Color("BoxStroke"), lineWidth: 1)
+                                                            .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
                                                     )
                                                     .onTapGesture {
                                                         withAnimation {
@@ -211,7 +212,7 @@ struct DailyCheckinDetailView: View {
                                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                                     .overlay(
                                                         RoundedRectangle(cornerRadius: 12)
-                                                            .stroke(Color("BoxStroke"), lineWidth: 1)
+                                                            .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
                                                     )
                                             @unknown default:
                                                 EmptyView()
@@ -229,11 +230,12 @@ struct DailyCheckinDetailView: View {
             .padding(.bottom, 20)
         }
         .ignoresSafeArea(edges: .top)
-        .background(Color("Background").ignoresSafeArea())
+        .background(themeManager.backgroundColor(for: colorScheme).ignoresSafeArea())
         .sheet(isPresented: $showingEditSheet) {
             if let userId = authManager.currentUser?.userId {
                 EditDailyCheckinView(checkin: checkin, userId: userId)
                     .environmentObject(authManager)
+                    .environmentObject(themeManager)
             }
         }
         .navigationBarHidden(true)
@@ -276,6 +278,97 @@ struct DailyCheckinDetailView: View {
     }
 }
 
+struct InfoBoxView: View {
+    let title: String
+    let value: String
+    let valueColor: Color
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+            Text(value)
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(valueColor)
+        }
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(themeManager.cardBackgroundColor(for: colorScheme))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
+        )
+        .cornerRadius(12)
+    }
+}
+
+struct ReflectionBoxView: View {
+    let title: String
+    let text: String
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
+    
+    var body: some View {
+        VStack(alignment: .center, spacing: 8) {
+            Text(title)
+                .font(.headline)
+                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+            Text(text)
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .foregroundColor(themeManager.textColor(for: colorScheme))
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding()
+        .background(themeManager.cardBackgroundColor(for: colorScheme))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
+        )
+    }
+}
+
+extension Date {
+    func formattedWithOrdinal() -> String {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.day, .month, .year], from: self)
+        guard let day = components.day,
+              let month = components.month,
+              let year = components.year else {
+            return ""
+        }
+        
+        // Formatter for month abbreviated and two-digit year.
+        let monthFormatter = DateFormatter()
+        monthFormatter.dateFormat = "MMM"
+        let monthString = monthFormatter.string(from: self)
+        
+        let yearFormatter = DateFormatter()
+        yearFormatter.dateFormat = "yy"
+        let yearString = yearFormatter.string(from: self)
+        
+        // Compute ordinal suffix.
+        let suffix: String
+        switch day {
+        case 11, 12, 13: suffix = "th"
+        default:
+            switch day % 10 {
+            case 1: suffix = "st"
+            case 2: suffix = "nd"
+            case 3: suffix = "rd"
+            default: suffix = "th"
+            }
+        }
+        
+        return "\(monthString) \(day)\(suffix) \(yearString)"
+    }
+}
+
 #Preview {
     let goals = [
         CompletedGoal(goalId: "1", name: "Drink water", completed: true),
@@ -296,5 +389,6 @@ struct DailyCheckinDetailView: View {
     return NavigationStack {
         DailyCheckinDetailView(checkin: checkin)
             .environmentObject(AuthManager.shared)
+            .environmentObject(ThemeManager())
     }
 }

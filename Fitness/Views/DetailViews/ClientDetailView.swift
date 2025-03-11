@@ -1,25 +1,26 @@
-//
-//  ClientDetailView.swift
-//  Fitness
-//
-//  Created by Harry Phillips on 09/02/2025.
-//
-
 import SwiftUI
 
 struct ClientDetailView: View {
     let client: AuthManager.DBUser
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Client: \(client.firstName) \(client.lastName)")
-                .font(.title)
-                .fontWeight(.bold)
-            // Add any additional details you’d like to display.
-            // For example, you could load and show the client's updates or progress.
-            Spacer()
+        ZStack {
+            themeManager.backgroundColor(for: colorScheme)
+                .ignoresSafeArea()
+                
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Client: \(client.firstName) \(client.lastName)")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                // Add any additional details you'd like to display.
+                // For example, you could load and show the client's updates or progress.
+                Spacer()
+            }
+            .padding()
         }
-        .padding()
         .navigationTitle("Client Details")
     }
 }
@@ -38,5 +39,6 @@ struct ClientDetailView_Previews: PreviewProvider {
             createdAt: nil
         )
         ClientDetailView(client: dummyClient)
+            .environmentObject(ThemeManager())
     }
 }

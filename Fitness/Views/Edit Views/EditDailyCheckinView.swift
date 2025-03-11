@@ -3,6 +3,9 @@ import PhotosUI
 
 struct EditDailyCheckinView: View {
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
+    
     @StateObject private var viewModel: DailyCheckinsViewModel
     @Environment(\.dismiss) var dismiss
     
@@ -26,76 +29,127 @@ struct EditDailyCheckinView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section(header: Text("Daily Goals")) {
-                    if viewModel.goalsList.isEmpty {
-                        Text("No goals set. Add goals in your profile settings.")
-                            .foregroundColor(.gray)
-                    } else {
-                        ForEach(viewModel.goalsList) { goal in
-                            if let goalIndex = completedGoals.firstIndex(where: { $0.goalId == goal.id }) {
-                                Toggle(getGoalDisplayText(goal), isOn: $completedGoals[goalIndex].completed)
-                                    .tint(Color("Accent"))
-                            } else {
-                                // This goal was added after the check-in was created
-                                Toggle(getGoalDisplayText(goal), isOn: Binding(
-                                    get: { false },
-                                    set: { newValue in
-                                        if newValue {
-                                            completedGoals.append(CompletedGoal(
-                                                goalId: goal.id,
-                                                name: getGoalDisplayText(goal),
-                                                completed: true
-                                            ))
+            ZStack {
+                themeManager.backgroundColor(for: colorScheme)
+                    .ignoresSafeArea()
+                
+                Form {
+                    Section(header: Text("Daily Goals")
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
+                        if viewModel.goalsList.isEmpty {
+                            Text("No goals set. Add goals in your profile settings.")
+                                .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
+                        } else {
+                            ForEach(viewModel.goalsList) { goal in
+                                if let goalIndex = completedGoals.firstIndex(where: { $0.goalId == goal.id }) {
+                                    Toggle(getGoalDisplayText(goal), isOn: $completedGoals[goalIndex].completed)
+                                        .tint(themeManager.accentColor(for: colorScheme))
+                                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                                } else {
+                                    // This goal was added after the check-in was created
+                                    Toggle(getGoalDisplayText(goal), isOn: Binding(
+                                        get: { false },
+                                        set: { newValue in
+                                            if newValue {
+                                                completedGoals.append(CompletedGoal(
+                                                    goalId: goal.id,
+                                                    name: getGoalDisplayText(goal),
+                                                    completed: true
+                                                ))
+                                            }
                                         }
-                                    }
-                                ))
-                                .foregroundColor(.secondary)
-                                .tint(Color("Accent"))
+                                    ))
+                                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme).opacity(0.6))
+                                    .tint(themeManager.accentColor(for: colorScheme))
+                                }
                             }
                         }
                     }
-                }
-                
-                Section(header: Text("Notes")) {
-                    TextEditor(text: $notes)
-                        .frame(minHeight: 100)
-                }
-                
-                Section(header: Text("Existing Photos")) {
-                    if existingImageUrls.isEmpty {
-                        Text("No photos")
-                            .foregroundColor(.gray)
-                    } else {
-                        ScrollView(.horizontal) {
-                            HStack {
-                                ForEach(existingImageUrls.indices, id: \.self) { index in
-                                    if let url = URL(string: existingImageUrls[index]) {
-                                        ZStack(alignment: .topTrailing) {
-                                            AsyncImage(url: url) { phase in
-                                                switch phase {
-                                                case .empty:
-                                                    ProgressView()
-                                                        .frame(width: 100, height: 100)
-                                                case .success(let image):
-                                                    image
-                                                        .resizable()
-                                                        .scaledToFill()
-                                                        .frame(width: 100, height: 100)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                                                case .failure:
-                                                    Image(systemName: "photo")
-                                                        .resizable()
-                                                        .scaledToFit()
-                                                        .frame(width: 100, height: 100)
-                                                        .foregroundColor(.gray)
-                                                @unknown default:
-                                                    EmptyView()
+                    .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
+                    
+                    Section(header: Text("Notes")
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
+                        TextEditor(text: $notes)
+                            .frame(minHeight: 100)
+                            .foregroundColor(themeManager.textColor(for: colorScheme))
+                    }
+                    .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
+                    
+                    Section(header: Text("Existing Photos")
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
+                        if existingImageUrls.isEmpty {
+                            Text("No photos")
+                                .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
+                        } else {
+                            ScrollView(.horizontal) {
+                                HStack {
+                                    ForEach(existingImageUrls.indices, id: \.self) { index in
+                                        if let url = URL(string: existingImageUrls[index]) {
+                                            ZStack(alignment: .topTrailing) {
+                                                AsyncImage(url: url) { phase in
+                                                    switch phase {
+                                                    case .empty:
+                                                        ProgressView()
+                                                            .frame(width: 100, height: 100)
+                                                    case .success(let image):
+                                                        image
+                                                            .resizable()
+                                                            .scaledToFill()
+                                                            .frame(width: 100, height: 100)
+                                                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                                    case .failure:
+                                                        Image(systemName: "photo")
+                                                            .resizable()
+                                                            .scaledToFit()
+                                                            .frame(width: 100, height: 100)
+                                                            .foregroundColor(.gray)
+                                                    @unknown default:
+                                                        EmptyView()
+                                                    }
                                                 }
+                                                
+                                                Button {
+                                                    existingImageUrls.remove(at: index)
+                                                } label: {
+                                                    Image(systemName: "xmark.circle.fill")
+                                                        .foregroundColor(.red)
+                                                        .background(Circle().fill(Color.white))
+                                                }
+                                                .offset(x: 6, y: -6)
                                             }
+                                            .padding(4)
+                                        }
+                                    }
+                                }
+                            }
+                            .frame(height: 120)
+                        }
+                    }
+                    .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
+                    
+                    Section(header: Text("Add New Photos")
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
+                        PhotosPicker(selection: $selectedItems, matching: .images, photoLibrary: .shared()) {
+                            Label("Select Photos", systemImage: "photo.on.rectangle.angled")
+                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                        }
+                        
+                        if !selectedImages.isEmpty {
+                            ScrollView(.horizontal) {
+                                HStack {
+                                    ForEach(0..<selectedImages.count, id: \.self) { index in
+                                        ZStack(alignment: .topTrailing) {
+                                            Image(uiImage: selectedImages[index])
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 100, height: 100)
+                                                .clipShape(RoundedRectangle(cornerRadius: 8))
                                             
                                             Button {
-                                                existingImageUrls.remove(at: index)
+                                                selectedImages.remove(at: index)
+                                                if index < selectedItems.count {
+                                                    selectedItems.remove(at: index)
+                                                }
                                             } label: {
                                                 Image(systemName: "xmark.circle.fill")
                                                     .foregroundColor(.red)
@@ -107,53 +161,20 @@ struct EditDailyCheckinView: View {
                                     }
                                 }
                             }
+                            .frame(height: 120)
                         }
-                        .frame(height: 120)
                     }
-                }
-                
-                Section(header: Text("Add New Photos")) {
-                    PhotosPicker(selection: $selectedItems, matching: .images, photoLibrary: .shared()) {
-                        Label("Select Photos", systemImage: "photo.on.rectangle.angled")
-                    }
+                    .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     
-                    if !selectedImages.isEmpty {
-                        ScrollView(.horizontal) {
-                            HStack {
-                                ForEach(0..<selectedImages.count, id: \.self) { index in
-                                    ZStack(alignment: .topTrailing) {
-                                        Image(uiImage: selectedImages[index])
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 100, height: 100)
-                                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                                        
-                                        Button {
-                                            selectedImages.remove(at: index)
-                                            if index < selectedItems.count {
-                                                selectedItems.remove(at: index)
-                                            }
-                                        } label: {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .foregroundColor(.red)
-                                                .background(Circle().fill(Color.white))
-                                        }
-                                        .offset(x: 6, y: -6)
-                                    }
-                                    .padding(4)
-                                }
-                            }
+                    if let errorMessage = errorMessage {
+                        Section {
+                            Text(errorMessage)
+                                .foregroundColor(.red)
                         }
-                        .frame(height: 120)
+                        .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     }
                 }
-                
-                if let errorMessage = errorMessage {
-                    Section {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                    }
-                }
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Edit Check-in")
             .toolbar {
@@ -165,12 +186,14 @@ struct EditDailyCheckinView: View {
                             updateCheckin()
                         }
                         .disabled(completedGoals.isEmpty)
+                        .foregroundColor(themeManager.accentColor(for: colorScheme))
                     }
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(themeManager.accentColor(for: colorScheme))
                 }
                 
                 ToolbarItem(placement: .destructiveAction) {
@@ -254,16 +277,28 @@ struct EditDailyCheckinView: View {
             return
         }
         
+        // Check if this is the last check-in
+        let isLastCheckin = authManager.dailyCheckins.count == 1
+        
         Task {
             do {
                 try await viewModel.deleteCheckin(checkinId: checkinId)
                 
                 await MainActor.run {
-                    // Force refresh after deletion
+                    // For the last check-in, manually clear the array
+                    if isLastCheckin {
+                        withAnimation {
+                            authManager.dailyCheckins = []
+                        }
+                        // Print for debugging
+                        print("Manually cleared dailyCheckins array after deleting last item")
+                    }
+                    
+                    // Force a refresh (this may not work for empty collections)
                     authManager.refreshDailyCheckins()
                     
                     // Add some delay to ensure Firebase has time to update
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         dismiss()
                     }
                 }
@@ -295,4 +330,5 @@ struct EditDailyCheckinView: View {
     
     return EditDailyCheckinView(checkin: checkin, userId: "user123")
         .environmentObject(AuthManager.shared)
+        .environmentObject(ThemeManager())
 }
