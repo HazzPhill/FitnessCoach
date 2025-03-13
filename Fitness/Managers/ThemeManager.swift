@@ -393,21 +393,21 @@ struct ThemeOption: View {
 extension ThemeManager {
     // Get the title font (Stranded)
     func titleFont(size: CGFloat = 24) -> Font {
-        return .AloeveraDisplayRegular(size: size)
+        return .manfieldSemiBold(size: size)
     }
     
     // Get the heading font (Stranded)
     func headingFont(size: CGFloat = 24) -> Font {
-        return .AloeveraDisplayRegular(size: size)
+        return .manfieldSemiBold(size: size)
     }
     
     // Get the body font (Macaria)
     func bodyFont(size: CGFloat = 16) -> Font {
-        return .macaria(size: size)
+        return .Mansfield(size: size)
     }
     
     // Get the caption font (Macaria)
     func captionFont(size: CGFloat = 12) -> Font {
-        return .macaria(size: size)
+        return .Mansfield(size: size)
     }
 }

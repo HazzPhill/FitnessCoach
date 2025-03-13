@@ -163,32 +163,7 @@ class AuthManager: ObservableObject {
             }
     }
     
-    // Schedule the weekly cleanup of check-ins
-    func scheduleWeeklyCheckinCleanup() {
-        // First, perform an immediate cleanup if needed
-        cleanupDailyCheckins()
-        
-        // Set up a timer to check daily if cleanup is needed
-        // We check daily rather than setting a timer for exactly next Monday
-        // as the app may not be running at the scheduled time
-        Timer.scheduledTimer(withTimeInterval: 24 * 60 * 60, repeats: true) { [weak self] _ in
-            self?.cleanupDailyCheckins()
-        }
-    }
-
-    // Clean up daily check-ins if today is Monday
-    func cleanupDailyCheckins() {
-        let calendar = Calendar.current
-        let today = Date()
-        let weekday = calendar.component(.weekday, from: today)
-        
-        // If today is Monday (weekday == 2 in Calendar.current), delete old check-ins
-        if weekday == 2 {
-            Task {
-                await cleanupOldCheckins()
-            }
-        }
-    }
+    
 
     func cleanupOldCheckins() async {
         guard let userId = currentUser?.userId else { return }

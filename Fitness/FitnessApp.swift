@@ -22,6 +22,14 @@ struct FitnessApp: App {
             } else {
                 print("Notification permission denied.")
             }
+            
+            // Add this to your app's initialization (like in your App struct's init)
+            for family in UIFont.familyNames.sorted() {
+                print("Family: \(family)")
+                for name in UIFont.fontNames(forFamilyName: family).sorted() {
+                    print("   Font: \(name)")
+                }
+            }
         }
         
     }

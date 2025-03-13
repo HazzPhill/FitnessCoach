@@ -9,38 +9,37 @@ import SwiftUI
 
 extension Font {
     // Macaria font for regular body text
-    static func macaria(size: CGFloat) -> Font {
-        return .custom("Macaria", size: size)
+    static func Mansfield(size: CGFloat) -> Font {
+        return .custom("Mansfield", size: size)
     }
     
-    // Stranded font for headings and titles
-    static func AloeveraDisplayRegular(size: CGFloat) -> Font {
-        return .custom("AloeveraDisplay", size: size)
+    static func manfieldSemiBold(size: CGFloat) -> Font {
+        return .custom("Mansfield Semi Bold", size: size)
     }
     
     // Common text styles using Macaria
     static var macariaNormal: Font {
-        return .macaria(size: 16)
+        return .Mansfield(size: 16)
     }
     
     static var macariaSmall: Font {
-        return .macaria(size: 14)
+        return .Mansfield(size: 14)
     }
     
     static var macariaCaption: Font {
-        return .macaria(size: 12)
+        return .Mansfield(size: 12)
     }
     
     // Common heading styles using Stranded
     static var strandedTitle: Font {
-        return .AloeveraDisplayRegular(size: 32)
+        return .manfieldSemiBold(size: 32)
     }
     
     static var strandedHeadline: Font {
-        return .AloeveraDisplayRegular(size: 24)
+        return .manfieldSemiBold(size: 24)
     }
     
     static var strandedSubheadline: Font {
-        return .AloeveraDisplayRegular(size: 20)
+        return .manfieldSemiBold(size: 20)
     }
 }
