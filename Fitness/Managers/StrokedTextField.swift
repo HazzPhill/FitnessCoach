@@ -27,7 +27,7 @@ struct ModernTextField: View {
         ZStack(alignment: .leading) {
             if text.isEmpty {
                 Text(placeholder)
-                    .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.5))
+                    .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme).opacity(0.5))
                     .padding(.horizontal)
             }
             
@@ -40,7 +40,7 @@ struct ModernTextField: View {
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
                 )
-                .foregroundColor(themeManager.textColor(for: colorScheme))
+                .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
         }
         .padding(.horizontal)
     }

@@ -387,6 +387,7 @@ struct ThemeOption: View {
             // Use a dark mode accent color
             return themeManager.activeColorScheme(for: .dark).accentColor
         }
+        
     }
 }
 

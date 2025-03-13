@@ -4,6 +4,8 @@ struct ClientBox: View {
     let clientName: String
     let clientId: String
     @StateObject private var viewModel: ClientBoxViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     
     init(clientName: String, clientId: String) {
         self.clientName = clientName
@@ -16,8 +18,8 @@ struct ClientBox: View {
             // Top row: Client name and the profile picture
             HStack {
                 Text(clientName)
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundColor(.black)
+                    .font(themeManager.bodyFont(size: 16))
+                    .foregroundColor(themeManager.textColor(for: colorScheme))
                 Spacer()
                 if let urlString = viewModel.clientProfileImageUrl,
                    let url = URL(string: urlString) {
@@ -52,24 +54,24 @@ struct ClientBox: View {
             }
             // Bottom row: Last update info
             HStack {
-                Image(systemName: "square.and.arrow.up.circle")
-                    .foregroundStyle(Color("SecondaryAccent"))
+               
                 Text(timeAgoString(from: viewModel.latestUpdate?.date))
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundColor(.black.opacity(0.5))
+                    .font(themeManager.captionFont(size: 12))
+                    .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.5))
                 Spacer()
-                Text("\(Int(viewModel.latestUpdate?.weight ?? 0))")
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundColor(.black.opacity(0.5))
+                Text("\(Int(viewModel.latestUpdate?.weight ?? 0)) KG")
+                    .font(themeManager.captionFont(size: 12))
+                    .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.5))
             }
         }
         .padding(.horizontal, 16)
         .frame(width: 164, height: 77, alignment: .leading)
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(Color("BoxStroke"), lineWidth: 2)
+                .stroke(Color(hex: "C6C6C6"), lineWidth: 3)
         )
-        .background(Color.white)
+        .background(themeManager.cardBackgroundColor(for: colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
     
     /// Returns a human-friendly "time ago" string from the given date.
@@ -99,6 +101,7 @@ struct ClientBox: View {
 struct ClientBox_Previews: PreviewProvider {
     static var previews: some View {
         ClientBox(clientName: "Harry P", clientId: "dummyClientId")
+            .environmentObject(ThemeManager())
             .previewLayout(.sizeThatFits)
     }
 }

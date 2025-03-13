@@ -2,18 +2,19 @@ import SwiftUI
 
 struct CoachHome: View {
     @EnvironmentObject var authManager: AuthManager  // Inject AuthManager
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         NavigationStack {
             ZStack {
-                Color("Background")
-                    .ignoresSafeArea(edges: .all)
+                themeManager.backgroundColor(for: colorScheme)
+                    .ignoresSafeArea()
                 VStack(alignment: .leading) {
                     HStack {
                         Text("Welcome \(authManager.currentUser?.firstName ?? "")")
-                            .font(.title)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Color("Accent"))
+                            .font(themeManager.titleFont(size: 24))
+                            .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                         Spacer()
                         NavigationLink {
                             SettingsView()
@@ -50,33 +51,36 @@ struct CoachHome: View {
                     }
                     
                     Text("Your Summary")
-                        .font(.title2)
-                        .fontWeight(.regular)
-                        .foregroundStyle(.black)
+                        .font(themeManager.headingFont(size: 18))
+                        .foregroundStyle(themeManager.textColor(for: colorScheme))
                     
                     // Your KPI ScrollView …
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack {
                             KPIBox(label: "Clients", figure: 200)
+                                .environmentObject(themeManager)
                                 .padding(.trailing, 20)
                             KPIBox(label: "Total Revenue", figure: 200)
+                                .environmentObject(themeManager)
                                 .padding(.trailing, 20)
                             KPIBox(label: "Total Revenue", figure: 200)
+                                .environmentObject(themeManager)
                                 .padding(.trailing, 20)
                         }
                         .padding(.vertical)
                     }
                     
                     Text("Your Clients")
-                        .font(.title2)
-                        .fontWeight(.regular)
-                        .foregroundStyle(.black)
+                        .font(themeManager.headingFont(size: 18))
+                        .foregroundStyle(themeManager.textColor(for: colorScheme))
                     
                     if let group = authManager.currentGroup, let groupId = group.id {
                         ClientListView(groupId: groupId)
+                            .environmentObject(themeManager)
                     } else {
                         Text("No group found. Please create or join a group.")
-                            .foregroundColor(.gray)
+                            .font(themeManager.bodyFont())
+                            .foregroundStyle(themeManager.textColor(for: colorScheme).opacity(0.6))
                             .padding(.vertical)
                     }
                     
@@ -92,5 +96,6 @@ struct CoachHome_Previews: PreviewProvider {
     static var previews: some View {
         CoachHome()
             .environmentObject(AuthManager.shared)
+            .environmentObject(ThemeManager())
     }
 }

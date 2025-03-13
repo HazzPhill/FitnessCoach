@@ -15,16 +15,18 @@ struct SecuritySettings: View {
             
             Form {
                 Section(header: Text("Reset Password")
-                            .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                            .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
+                            .font(themeManager.headingFont(size: 16))
                             .fontWeight(.bold)) {
                     Text("Enter your email to receive a password reset link.")
-                        .font(.subheadline)
-                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                        .font(themeManager.bodyFont(size: 14))
+                        .foregroundStyle(themeManager.textColor(for: colorScheme))
                     TextField("Email", text: $email)
+                        .font(themeManager.bodyFont())
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
                         .keyboardType(.emailAddress)
-                        .foregroundColor(themeManager.textColor(for: colorScheme))
+                        .foregroundStyle(themeManager.textColor(for: colorScheme))
                     Button("Send Reset Link") {
                         Task {
                             do {
@@ -35,12 +37,13 @@ struct SecuritySettings: View {
                             }
                         }
                     }
-                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                    .font(themeManager.bodyFont())
+                    .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                     
                     if let message = resetMessage {
                         Text(message)
-                            .foregroundColor(message.contains("Error") ? .red : themeManager.accentColor(for: colorScheme))
-                            .font(.footnote)
+                            .foregroundStyle(message.contains("Error") ? .red : themeManager.accentColor(for: colorScheme))
+                            .font(themeManager.captionFont())
                     }
                 }
                 .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
@@ -48,6 +51,7 @@ struct SecuritySettings: View {
             .scrollContentBackground(.hidden)
         }
         .navigationTitle("Security")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

@@ -9,9 +9,13 @@ struct ClientView: View {
     @StateObject private var goalsViewModel: DailyGoalsViewModel
     @StateObject private var checkinsViewModel: ClientDailyCheckinsViewModel
     @StateObject private var weightViewModel: WeightEntriesViewModel
+    
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
+    
     @Namespace private var namespace
     @Namespace private var checkinNamespace
-
+    
     init(client: AuthManager.DBUser) {
         self.client = client
         _updatesViewModel = StateObject(wrappedValue: ClientUpdatesViewModel(clientId: client.userId))
@@ -23,16 +27,16 @@ struct ClientView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color("Background")
+                themeManager.backgroundColor(for: colorScheme)
                     .ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         // Header Section
                         HStack {
                             Text("\(client.firstName)'s Dashboard")
-                                .font(.title)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(Color("Accent"))
+                                .font(themeManager.titleFont(size: 24))
+                                .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
+                                .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
                             Spacer()
                             if let profileImageUrl = client.profileImageUrl,
                                let url = URL(string: profileImageUrl) {
@@ -71,9 +75,8 @@ struct ClientView: View {
                         // Weekly Goals Section
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Weekly Goals")
-                                .font(.title2)
-                                .fontWeight(.regular)
-                                .foregroundStyle(.black)
+                                .font(themeManager.headingFont(size: 18))
+                                .foregroundStyle(themeManager.textColor(for: colorScheme))
                             
                             // Goals grid display
                             LazyVGrid(columns: [
@@ -96,23 +99,23 @@ struct ClientView: View {
                         
                         // Progress Section - Now using the complete weight history
                         Text("Progress")
-                            .font(.title2)
-                            .fontWeight(.regular)
-                            .foregroundStyle(.black)
+                            .font(themeManager.headingFont(size: 18))
+                            .foregroundStyle(themeManager.textColor(for: colorScheme))
                         WeightGraphView(weightEntries: weightViewModel.weightEntries)
+                            .environmentObject(themeManager)
                         
                         // Plan Section: One horizontal scroll view with 7 cards.
                         Text("Plan")
-                            .font(.title2)
-                            .fontWeight(.regular)
-                            .foregroundStyle(.black)
+                            .font(themeManager.headingFont(size: 18))
+                            .foregroundStyle(themeManager.textColor(for: colorScheme))
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 20) {
                                 ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { day in
                                     DayMealPlanCard(day: day,
                                                     clientId: client.userId,
                                                     isCoach: true)
-                                        .frame(width: 260)
+                                    .environmentObject(themeManager)
+                                    .frame(width: 260)
                                 }
                             }
                             .padding(.vertical)
@@ -122,28 +125,34 @@ struct ClientView: View {
                         // Daily Check-ins Section
                         HStack {
                             Text("Daily Check-ins")
-                                .font(.title2)
-                                .fontWeight(.regular)
-                                .foregroundStyle(.black)
+                                .font(themeManager.headingFont(size: 18))
+                                .foregroundStyle(themeManager.textColor(for: colorScheme))
                             Spacer()
                         }
                         
                         LazyVStack(spacing: 16) {
                             if checkinsViewModel.checkins.isEmpty {
                                 Text("No daily check-ins yet.")
-                                    .foregroundColor(.gray)
+                                    .font(themeManager.bodyFont(size: 16))
+                                    .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                                     .padding()
                                     .frame(maxWidth: .infinity, alignment: .center)
                             } else {
                                 ForEach(checkinsViewModel.checkins) { checkin in
                                     NavigationLink {
                                         DailyCheckinDetailView(checkin: checkin)
+                                            .environmentObject(themeManager)
                                             .navigationTransition(.zoom(sourceID: checkin.id ?? "", in: checkinNamespace))
                                     } label: {
                                         DailyCheckinPreview(checkin: checkin)
+                                            .environmentObject(themeManager)
                                             .matchedTransitionSource(id: checkin.id ?? "", in: checkinNamespace)
                                     }
                                     .buttonStyle(.plain)
+                                    .simultaneousGesture(TapGesture().onEnded {
+                                        let generator = UIImpactFeedbackGenerator(style: .light)
+                                        generator.impactOccurred()
+                                    })
                                 }
                             }
                         }
@@ -151,20 +160,21 @@ struct ClientView: View {
                         // Updates Section
                         HStack {
                             Text("Weekly Check-ins")
-                                .font(.title2)
-                                .fontWeight(.regular)
-                                .foregroundStyle(.black)
+                                .font(themeManager.headingFont(size: 18))
+                                .foregroundStyle(themeManager.textColor(for: colorScheme))
                             Spacer()
                         }
                         ScrollView {
                             if updatesViewModel.updates.isEmpty {
                                 Text("No weekly check-ins yet.")
-                                    .foregroundColor(.gray)
+                                    .font(themeManager.bodyFont(size: 16))
+                                    .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                                     .padding()
                             } else {
                                 ForEach(updatesViewModel.updates) { update in
                                     NavigationLink {
                                         UpdateDetailView(update: update)
+                                            .environmentObject(themeManager)
                                             .navigationTransition(.zoom(sourceID: update.id, in: namespace))
                                     } label: {
                                         UpdatePreview(
@@ -173,12 +183,18 @@ struct ClientView: View {
                                             date: update.date ?? Date(),
                                             imageUrl: update.imageUrl
                                         )
+                                        .environmentObject(themeManager)
                                         .matchedTransitionSource(id: update.id, in: namespace)
                                     }
                                     .buttonStyle(.plain)
+                                    .simultaneousGesture(TapGesture().onEnded {
+                                        let generator = UIImpactFeedbackGenerator(style: .light)
+                                        generator.impactOccurred()
+                                    })
                                 }
                             }
                         }
+                        .scrollIndicators(.hidden)
                     }
                     .padding()
                 }
@@ -194,22 +210,22 @@ struct ClientView: View {
     private func goalCard(title: String, value: String) -> some View {
         VStack(alignment: .leading) {
             Text(title)
-                .font(.headline)
-                .foregroundColor(Color("SecondaryAccent"))
+                .font(themeManager.headingFont(size: 16))
+                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
             
             Text(value.isEmpty ? "Not set" : value)
-                .font(.title3)
-                .foregroundColor(.black)
+                .font(themeManager.bodyFont(size: 18))
+                .foregroundColor(themeManager.textColor(for: colorScheme))
                 .lineLimit(1)
                 .truncationMode(.tail)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(Color.white)
+        .background(themeManager.cardBackgroundColor(for: colorScheme))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color("BoxStroke"), lineWidth: 1)
+                .stroke(Color(hex: "C6C6C6"), lineWidth: 2)
         )
     }
 }

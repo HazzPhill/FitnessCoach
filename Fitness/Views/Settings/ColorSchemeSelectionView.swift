@@ -34,8 +34,8 @@ struct ColorSchemeSelectionView: View {
             ScrollView {
                 VStack(spacing: 25) {
                     Text("Select a color scheme to customise your app's appearance. The accent color will automatically adjust based on your theme selection.")
-                        .font(.subheadline)
-                        .foregroundColor(themeManager.textColor(for: colorScheme))
+                        .font(themeManager.bodyFont(size: 14))
+                        .foregroundStyle(themeManager.textColor(for: colorScheme))
                         .padding(.horizontal)
                         .padding(.top)
                     
@@ -48,8 +48,10 @@ struct ColorSchemeSelectionView: View {
                         } label: {
                             SchemePreviewCell(scheme: scheme, isSelected: themeManager.selectedColorScheme.id == scheme.id)
                         }
+                        .font(themeManager.bodyFont(size: 14))
                         .buttonStyle(PlainButtonStyle())
                     }
+                    .font(themeManager.bodyFont(size: 14))
                     
                     Spacer()
                 }
@@ -57,11 +59,14 @@ struct ColorSchemeSelectionView: View {
             }
         }
         .navigationTitle("Color Scheme")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
 // Preview cell for a color scheme
 struct SchemePreviewCell: View {
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     let scheme: ColorScheme
     let isSelected: Bool
     
@@ -74,7 +79,7 @@ struct SchemePreviewCell: View {
                     .frame(width: 150, height: 100)
                     .overlay(
                         Text("Background")
-                            .font(.caption)
+                            .font(themeManager.captionFont())
                             .foregroundColor(scheme.textColor)
                             .padding(8)
                             .background(Color.black.opacity(0.2))
@@ -87,7 +92,7 @@ struct SchemePreviewCell: View {
                     .frame(width: 150, height: 100)
                     .overlay(
                         Text("Accent")
-                            .font(.caption)
+                            .font(themeManager.captionFont())
                             .foregroundColor(.white)
                             .padding(8)
                             .background(Color.black.opacity(0.2))
@@ -100,35 +105,26 @@ struct SchemePreviewCell: View {
             // Scheme info
             HStack {
                 Text(scheme.displayName)
-                    .font(.headline)
-                    .foregroundColor(Color.primary)
+                    .font(themeManager.bodyFont())
+                    .foregroundColor(themeManager.textColor(for: colorScheme))
                 
                 Spacer()
                 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.blue)
+                        .foregroundColor(themeManager.accentColor(for: colorScheme))
                         .font(.title3)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(Color(.secondarySystemBackground))
+            .background(themeManager.cardBackgroundColor(for: colorScheme))
         }
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.blue : Color.gray.opacity(0.3), lineWidth: isSelected ? 2 : 1)
+                .stroke(isSelected ? themeManager.accentColor(for: colorScheme) : Color.gray.opacity(0.3), lineWidth: isSelected ? 2 : 1)
         )
         .padding(.horizontal)
-    }
-}
-
-struct ColorSchemeSelectionView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            ColorSchemeSelectionView()
-                .environmentObject(ThemeManager())
-        }
     }
 }

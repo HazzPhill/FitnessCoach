@@ -16,7 +16,8 @@ struct AccountSettings: View {
             
             Form {
                 Section(header: Text("Profile Picture")
-                            .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                            .font(themeManager.headingFont(size: 16))
+                            .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                             .fontWeight(.bold)) {
                     HStack {
                         if let profileImageUrl = authManager.currentUser?.profileImageUrl,
@@ -54,7 +55,8 @@ struct AccountSettings: View {
                         Button("Change Picture") {
                             showingProfileImagePicker = true
                         }
-                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                        .font(themeManager.bodyFont())
+                        .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                     }
                 }
                 .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
@@ -63,6 +65,7 @@ struct AccountSettings: View {
                     Button("Delete Account") {
                         // TODO: Implement account deletion functionality.
                     }
+                    .font(themeManager.bodyFont())
                     .foregroundColor(.red)
                 }
                 .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
@@ -70,6 +73,7 @@ struct AccountSettings: View {
             .scrollContentBackground(.hidden)
         }
         .navigationTitle("Account Settings")
+        .navigationBarTitleDisplayMode(.inline)
         .photosPicker(isPresented: $showingProfileImagePicker, selection: $selectedProfileItem, matching: .images)
         .onChange(of: selectedProfileItem) { newItem in
             Task {
@@ -79,16 +83,6 @@ struct AccountSettings: View {
                     try await authManager.updateProfilePicture(image: image)
                 }
             }
-        }
-    }
-}
-
-struct AccountSettings_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            AccountSettings()
-                .environmentObject(AuthManager.shared)
-                .environmentObject(ThemeManager())
         }
     }
 }

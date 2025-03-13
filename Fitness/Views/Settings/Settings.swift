@@ -28,11 +28,11 @@ struct SettingsView: View {
                             if let latestWeight = authManager.latestUpdates.first?.weight {
                                 Text("\(latestWeight, specifier: "%.1f") KG")
                                     .foregroundColor(.white)
-                                    .font(.system(size: 40))
+                                    .font(themeManager.titleFont(size: 40))
                             } else {
                                 Text("No weight recorded")
                                     .foregroundColor(.white)
-                                    .font(.headline)
+                                    .font(themeManager.bodyFont(size: 18))
                             }
                         }
                         .padding(.horizontal)
@@ -44,28 +44,33 @@ struct SettingsView: View {
                         Section {
                             NavigationLink("Account Settings", destination: AccountSettings()
                                 .environmentObject(themeManager))
+                            .font(themeManager.bodyFont())
                             .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
+                            
                             NavigationLink("Security", destination: SecuritySettings()
                                 .environmentObject(themeManager))
+                            .font(themeManager.bodyFont())
                             .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                         }
                         .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                         
                         // MARK: Customization Section
                         Section(header: Text("Customisation")
+                            .font(themeManager.headingFont(size: 16))
                             .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
-                                    .fontWeight(.bold)) {
+                            .fontWeight(.bold)) {
                             
-                                        AnimatedThemePicker(selectedTheme: $themeManager.selectedTheme, themeManager: themeManager)
-                                            .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
-                                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                                            .padding(.vertical)
+                            AnimatedThemePicker(selectedTheme: $themeManager.selectedTheme, themeManager: themeManager)
+                                .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
+                                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                                .padding(.vertical)
                             
                             // Color scheme selection
                             NavigationLink(destination: ColorSchemeSelectionView()
                                 .environmentObject(themeManager)) {
                                 HStack {
                                     Text("Color Scheme")
+                                        .font(themeManager.bodyFont())
                                         .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                                     Spacer()
                                     
@@ -92,6 +97,7 @@ struct SettingsView: View {
                                     .padding(.trailing, 4)
                                     
                                     Text(themeManager.activeColorScheme(for: colorScheme).displayName)
+                                        .font(themeManager.captionFont())
                                         .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                                 }
                             }
@@ -101,12 +107,16 @@ struct SettingsView: View {
                         // MARK: Group Settings (Coach Only)
                         if authManager.currentUser?.role == .coach {
                             Section(header: Text("Group Settings")
-                                        .foregroundColor(themeManager.accentColor(for: colorScheme))
-                                        .fontWeight(.bold)) {
+                                .font(themeManager.headingFont(size: 16))
+                                .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
+                                .fontWeight(.bold)) {
+                                
                                 TextField("Group Name", text: $groupName)
+                                    .font(themeManager.bodyFont())
                                     .onAppear {
                                         groupName = authManager.currentGroup?.name ?? ""
                                     }
+                                    .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                                     .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                                 
                                 HStack(spacing: 16) {
@@ -150,20 +160,23 @@ struct SettingsView: View {
                                     Button("Change Group Photo") {
                                         showingGroupImagePicker = true
                                     }
-                                    .foregroundColor(themeManager.accentColor(for: colorScheme))
+                                    .font(themeManager.bodyFont())
+                                    .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                                 }
                                 .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                                 
-                                Button("Show Share Code") {
+                                Button("Share Group Code") {
                                     if let code = authManager.currentGroup?.code {
-                                        let activityVC = UIActivityViewController(activityItems: [code], applicationActivities: nil)
+                                        let shareMessage = "Come join my Coaching Group! Code: \(code)"
+                                        let activityVC = UIActivityViewController(activityItems: [shareMessage], applicationActivities: nil)
                                         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                                            let rootVC = windowScene.windows.first?.rootViewController {
                                             rootVC.present(activityVC, animated: true)
                                         }
                                     }
                                 }
-                                .foregroundColor(themeManager.accentColor(for: colorScheme))
+                                .font(themeManager.bodyFont())
+                                .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                                 .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                             }
                         }
@@ -177,6 +190,7 @@ struct SettingsView: View {
                                     print("Error logging out: \(error.localizedDescription)")
                                 }
                             }
+                            .font(themeManager.bodyFont())
                             .foregroundColor(.red)
                         }
                         .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
@@ -184,7 +198,8 @@ struct SettingsView: View {
                     .scrollContentBackground(.hidden)
                 }
             }
-            .navigationTitle("")
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
             // MARK: Group image picker (for coaches)
             .photosPicker(isPresented: $showingGroupImagePicker, selection: $selectedGroupItem, matching: .images)
             .onChange(of: selectedGroupItem) { newItem in
@@ -197,13 +212,5 @@ struct SettingsView: View {
                 }
             }
         }
-    }
-}
-
-struct SettingsView_Previews: PreviewProvider {
-    static var previews: some View {
-        SettingsView()
-            .environmentObject(AuthManager.shared)
-            .environmentObject(ThemeManager())
     }
 }

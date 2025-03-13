@@ -11,8 +11,9 @@ struct LocalModernButton: View {
     var body: some View {
         Button(action: action) {
             Text(label)
-                .font(.headline)
-                .foregroundColor(Color.white)
+                .font(themeManager.bodyFont(size: 16))
+                .fontWeight(.semibold)
+                .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                 .frame(maxWidth: .infinity, minHeight: 50)
                 .background(themeManager.accentColor(for: colorScheme))
                 .cornerRadius(25)
@@ -47,8 +48,8 @@ struct UploadMealPlanView: View {
                         // Meal Information Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Meal Information")
-                                .font(.headline)
-                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                                .font(themeManager.headingFont(size: 18))
+                                .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
                             ModernTextField(placeholder: "Meal Name", text: $mealName)
@@ -58,8 +59,8 @@ struct UploadMealPlanView: View {
                         // Meal Image Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Meal Image")
-                                .font(.headline)
-                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                                .font(themeManager.headingFont(size: 18))
+                                .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
                             if let image = selectedImage {
@@ -75,9 +76,10 @@ struct UploadMealPlanView: View {
                                     isImagePickerPresented = true
                                 }) {
                                     Text("Select Image")
-                                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                                        .font(themeManager.bodyFont())
+                                        .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                                         .padding()
-                                        .frame(maxWidth: .infinity)
+                                        .frame(maxWidth: .infinity, minHeight: 50)
                                         .background(themeManager.accentColor(for: colorScheme).opacity(0.1))
                                         .cornerRadius(8)
                                         .overlay(
@@ -92,8 +94,8 @@ struct UploadMealPlanView: View {
                         // Ingredients Section (Accordion)
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Ingredients")
-                                .font(.headline)
-                                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                                .font(themeManager.headingFont(size: 18))
+                                .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding(.horizontal)
                             
                             ForEach(ingredients.indices, id: \.self) { index in
@@ -130,11 +132,12 @@ struct UploadMealPlanView: View {
                                 HStack {
                                     Image(systemName: "plus.circle")
                                     Text("Add Ingredient")
+                                        .font(themeManager.bodyFont())
                                 }
-                                .foregroundColor(themeManager.accentColor(for: colorScheme))
+                                .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                                 .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(themeManager.cardBackgroundColor(for: colorScheme).opacity(0.3))
+                                .frame(maxWidth: .infinity, minHeight: 50)
+                                .background(themeManager.accentColor(for: colorScheme).opacity(0.1))
                                 .cornerRadius(8)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 8)
@@ -168,7 +171,8 @@ struct UploadMealPlanView: View {
                         // Upload status message
                         if !uploadStatus.isEmpty {
                             Text(uploadStatus)
-                                .foregroundColor(uploadStatus.contains("Error") ? .red : .green)
+                                .font(themeManager.bodyFont())
+                                .foregroundStyle(uploadStatus.contains("Error") ? .red : .green)
                                 .padding(.horizontal)
                         }
                         
@@ -178,17 +182,11 @@ struct UploadMealPlanView: View {
                 }
             }
             .navigationTitle("\(day) – \(mealSlot) Plan")
+            .navigationBarTitleDisplayMode(.inline)
         }
         .sheet(isPresented: $isImagePickerPresented) {
             ImagePicker(image: $selectedImage)
         }
-    }
-}
-
-struct UploadMealPlanView_Previews: PreviewProvider {
-    static var previews: some View {
-        UploadMealPlanView(clientId: "dummyClientId", day: "Monday", mealSlot: "Meal 1")
-            .environmentObject(ThemeManager())
     }
 }
 
@@ -205,22 +203,22 @@ struct IngredientAccordionView: View {
             isExpanded: $isExpanded,
             content: {
                 VStack(alignment: .leading, spacing: 10) {
-                    ModernTextField(placeholder: "Amount", text: $ingredient.amount)
+                    CustomTextField(placeholder: "Amount", text: $ingredient.amount)
                         .environmentObject(themeManager)
-                    ModernTextField(placeholder: "Protein", text: $ingredient.protein)
+                    CustomTextField(placeholder: "Protein", text: $ingredient.protein)
                         .environmentObject(themeManager)
-                    ModernTextField(placeholder: "Calories", text: $ingredient.calories)
+                    CustomTextField(placeholder: "Calories", text: $ingredient.calories)
                         .environmentObject(themeManager)
-                    ModernTextField(placeholder: "Carbs", text: $ingredient.carbs)
+                    CustomTextField(placeholder: "Carbs", text: $ingredient.carbs)
                         .environmentObject(themeManager)
-                    ModernTextField(placeholder: "Fats", text: $ingredient.fats)
+                    CustomTextField(placeholder: "Fats", text: $ingredient.fats)
                         .environmentObject(themeManager)
                 }
                 .padding(.vertical, 5)
             },
             label: {
                 HStack {
-                    ModernTextField(placeholder: "Ingredient Name", text: $ingredient.name)
+                    CustomTextField(placeholder: "Ingredient Name", text: $ingredient.name)
                         .environmentObject(themeManager)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     Button(action: onDelete) {
@@ -235,7 +233,7 @@ struct IngredientAccordionView: View {
                     .padding(.trailing, 8)
                     // Custom chevron arrow using SF Symbols
                     Image(systemName: isExpanded ? "chevron.down.circle.fill" : "chevron.right.circle.fill")
-                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                        .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                         .scaledToFit()
                         .frame(width: 24, height: 24)
                         .onTapGesture {
@@ -250,5 +248,50 @@ struct IngredientAccordionView: View {
         .padding(.vertical, 5)
         .background(themeManager.cardBackgroundColor(for: colorScheme).opacity(0.3))
         .cornerRadius(8)
+    }
+}
+
+// Custom TextField with proper styling
+struct CustomTextField: View {
+    var placeholder: String
+    @Binding var text: String
+    @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
+    @FocusState private var isFocused: Bool
+    
+    var body: some View {
+        ZStack(alignment: .leading) {
+            if text.isEmpty {
+                Text(placeholder)
+                    .font(themeManager.bodyFont())
+                    .foregroundStyle(placeholderColor)
+                    .padding(.horizontal)
+            }
+            
+            TextField("", text: $text)
+                .font(themeManager.bodyFont())
+                .foregroundStyle(themeManager.textColor(for: colorScheme))
+                .padding()
+                .background(themeManager.cardBackgroundColor(for: colorScheme))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isFocused ?
+                                themeManager.accentColor(for: colorScheme) :
+                                Color(hex: "C6C6C6"),
+                                lineWidth: isFocused ? 3 : 2)
+                )
+                .focused($isFocused)
+                .animation(.easeInOut(duration: 0.2), value: isFocused)
+        }
+    }
+    
+    // Compute placeholder color based on mode
+    private var placeholderColor: Color {
+        if colorScheme == .dark {
+            return Color.black.opacity(0.8)
+        } else {
+            return Color.white.opacity(0.8)
+        }
     }
 }

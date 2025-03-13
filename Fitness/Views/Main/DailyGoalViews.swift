@@ -23,10 +23,9 @@ struct DailyGoalsView: View {
                 
                 VStack(spacing: 20) {
                     Text("Set Daily Goals")
-                        .font(.title)
-                        .fontWeight(.semibold)
+                        .font(themeManager.titleFont(size: 24))
                         .padding(.top, 16)
-                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                        .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                     
                     // A vertical stack of goal fields (without Water)
                     VStack(spacing: 12) {
@@ -72,7 +71,8 @@ struct DailyGoalsView: View {
                         }
                     } label: {
                         Text(isEditing ? "Save Goals" : "Edit")
-                            .font(.headline)
+                            .font(themeManager.bodyFont(size: 16))
+                            .fontWeight(.semibold)
                             .foregroundColor(themeManager.backgroundColor(for: colorScheme))
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .background(themeManager.accentColor(for: colorScheme))
@@ -82,6 +82,8 @@ struct DailyGoalsView: View {
                     .padding(.bottom, 16)
                 }
             }
+            .navigationTitle("Daily Goals")
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
@@ -98,28 +100,28 @@ struct GoalField: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(hex: "C6C6C6"), lineWidth: 2)
+                .stroke(Color(hex: "C6C6C6"), lineWidth: 3)
                 .background(themeManager.cardBackgroundColor(for: colorScheme))
                 .cornerRadius(12)
             
             HStack {
                 Text(label)
-                    .font(.body)
-                    .foregroundColor(themeManager.textColor(for: colorScheme))
+                    .font(themeManager.bodyFont())
+                    .foregroundStyle(themeManager.textColor(for: colorScheme))
                 Spacer()
                 if isEditing {
                     TextField("", text: $text)
                         .multilineTextAlignment(.trailing)
-                        .foregroundColor(themeManager.textColor(for: colorScheme))
-                        .font(.body)
+                        .foregroundStyle(themeManager.textColor(for: colorScheme))
+                        .font(themeManager.bodyFont())
                         .frame(minWidth: 50)
                 } else {
                     HStack(spacing: 4) {
                         Text(text.isEmpty ? "Not set" : text)
-                            .font(.body)
-                            .foregroundColor(themeManager.textColor(for: colorScheme))
+                            .font(themeManager.bodyFont())
+                            .foregroundStyle(themeManager.textColor(for: colorScheme))
                         Image(systemName: "pencil")
-                            .foregroundColor(.gray)
+                            .foregroundStyle(themeManager.accentColor(for: colorScheme).opacity(0.8))
                     }
                 }
             }
