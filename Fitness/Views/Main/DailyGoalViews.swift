@@ -82,8 +82,17 @@ struct DailyGoalsView: View {
                     .padding(.bottom, 16)
                 }
             }
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    ModernBackButton()
+                        .environmentObject(themeManager)
+                }
+            }
             .navigationTitle("Daily Goals")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(themeManager.backgroundColor(for: colorScheme), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
     }
 }
@@ -129,17 +138,5 @@ struct GoalField: View {
             .padding(.vertical, 12)
         }
         .frame(height: 60)
-    }
-}
-
-#Preview {
-    Group {
-        DailyGoalsView(userId: "dummyUserId")
-            .environmentObject(ThemeManager())
-            .preferredColorScheme(.light)
-        
-        DailyGoalsView(userId: "dummyUserId")
-            .environmentObject(ThemeManager())
-            .preferredColorScheme(.dark)
     }
 }

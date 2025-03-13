@@ -50,17 +50,17 @@ struct SecuritySettings: View {
             }
             .scrollContentBackground(.hidden)
         }
-        .navigationTitle("Security")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-struct SecuritySettings_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            SecuritySettings()
-                .environmentObject(AuthManager.shared)
-                .environmentObject(ThemeManager())
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                ModernBackButton()
+                    .environmentObject(themeManager)
+            }
         }
+        .navigationTitle("")
+        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(themeManager.backgroundColor(for: colorScheme), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
     }
 }

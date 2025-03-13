@@ -30,8 +30,6 @@ struct allUpdatesView: View {
     }
     
     // Filter updates based on toggle states.
-    // When showAll is true, sort descending (newest first).
-    // When filtering by date, sort descending too.
     var filteredUpdates: [AuthManager.Update] {
         let updates: [AuthManager.Update] = {
             if showAll {
@@ -150,17 +148,19 @@ struct allUpdatesView: View {
                     }
                     .listStyle(PlainListStyle())
                     .background(themeManager.backgroundColor(for: colorScheme))
+                    .scrollContentBackground(.hidden)
                 }
             }
         }
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                ModernBackButton()
+                    .environmentObject(themeManager)
+            }
+        }
         .navigationTitle("")
-    }
-}
-
-#Preview {
-    NavigationStack {
-        allUpdatesView()
-            .environmentObject(AuthManager.shared)
-            .environmentObject(ThemeManager())
+        .toolbarBackground(themeManager.backgroundColor(for: colorScheme), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
     }
 }

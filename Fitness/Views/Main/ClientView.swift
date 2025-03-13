@@ -198,11 +198,22 @@ struct ClientView: View {
                     }
                     .padding()
                 }
+                .scrollContentBackground(.hidden) // This fixes the white bar when scrolling
             }
             .onAppear {
                 // Refresh weight entries when view appears to make sure we have the most current data
                 weightViewModel.fetchAllWeightEntries(userId: client.userId)
             }
+            .navigationBarBackButtonHidden(true) // Hide the default back button
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    ModernBackButton()
+                        .environmentObject(themeManager)
+                }
+            }
+            // These settings fix the white bar when scrolling by making the navigation bar use theme colors
+            .toolbarBackground(themeManager.backgroundColor(for: colorScheme), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
         }
     }
     

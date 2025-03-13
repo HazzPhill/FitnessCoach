@@ -35,14 +35,17 @@ struct EditDailyCheckinView: View {
                 
                 Form {
                     Section(header: Text("Daily Goals")
-                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
+                        .font(themeManager.headingFont(size: 16))
+                        .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))) {
                         if viewModel.goalsList.isEmpty {
                             Text("No goals set. Add goals in your profile settings.")
+                                .font(themeManager.bodyFont())
                                 .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                         } else {
                             ForEach(viewModel.goalsList) { goal in
                                 if let goalIndex = completedGoals.firstIndex(where: { $0.goalId == goal.id }) {
                                     Toggle(getGoalDisplayText(goal), isOn: $completedGoals[goalIndex].completed)
+                                        .font(themeManager.bodyFont())
                                         .tint(themeManager.accentColor(for: colorScheme))
                                         .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                                 } else {
@@ -59,6 +62,7 @@ struct EditDailyCheckinView: View {
                                             }
                                         }
                                     ))
+                                    .font(themeManager.bodyFont())
                                     .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme).opacity(0.6))
                                     .tint(themeManager.accentColor(for: colorScheme))
                                 }
@@ -68,17 +72,23 @@ struct EditDailyCheckinView: View {
                     .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     
                     Section(header: Text("Notes")
-                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
+                        .font(themeManager.headingFont(size: 16))
+                        .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))) {
                         TextEditor(text: $notes)
+                            .font(themeManager.bodyFont())
                             .frame(minHeight: 100)
                             .foregroundColor(themeManager.textColor(for: colorScheme))
+                            .scrollContentBackground(.hidden)
+                            .background(themeManager.cardBackgroundColor(for: colorScheme))
                     }
                     .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     
                     Section(header: Text("Existing Photos")
-                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
+                        .font(themeManager.headingFont(size: 16))
+                        .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))) {
                         if existingImageUrls.isEmpty {
                             Text("No photos")
+                                .font(themeManager.bodyFont())
                                 .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                         } else {
                             ScrollView(.horizontal) {
@@ -128,9 +138,11 @@ struct EditDailyCheckinView: View {
                     .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     
                     Section(header: Text("Add New Photos")
-                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
+                        .font(themeManager.headingFont(size: 16))
+                        .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))) {
                         PhotosPicker(selection: $selectedItems, matching: .images, photoLibrary: .shared()) {
                             Label("Select Photos", systemImage: "photo.on.rectangle.angled")
+                                .font(themeManager.bodyFont())
                                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                         }
                         
@@ -169,6 +181,7 @@ struct EditDailyCheckinView: View {
                     if let errorMessage = errorMessage {
                         Section {
                             Text(errorMessage)
+                                .font(themeManager.bodyFont())
                                 .foregroundColor(.red)
                         }
                         .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
@@ -176,8 +189,12 @@ struct EditDailyCheckinView: View {
                 }
                 .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Edit Check-in")
+            .navigationBarBackButtonHidden(true)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    ModernBackButton()
+                        .environmentObject(themeManager)
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     if isSubmitting {
                         ProgressView()
@@ -186,22 +203,24 @@ struct EditDailyCheckinView: View {
                             updateCheckin()
                         }
                         .disabled(completedGoals.isEmpty)
+                        .font(themeManager.bodyFont())
                         .foregroundColor(themeManager.accentColor(for: colorScheme))
                     }
                 }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundColor(themeManager.accentColor(for: colorScheme))
-                }
+            
                 
                 ToolbarItem(placement: .destructiveAction) {
                     Button("Delete", role: .destructive) {
                         deleteCheckin()
                     }
+                    .font(themeManager.bodyFont())
+                    .foregroundColor(themeManager.accentColor(for: colorScheme))
                 }
             }
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(themeManager.backgroundColor(for: colorScheme), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .onChange(of: selectedItems) { newValue in
                 loadSelectedImages(from: newValue)
             }
@@ -309,26 +328,4 @@ struct EditDailyCheckinView: View {
             }
         }
     }
-}
-
-#Preview {
-    let goals = [
-        CompletedGoal(goalId: "1", name: "Drink water", completed: true),
-        CompletedGoal(goalId: "2", name: "Exercise", completed: true),
-        CompletedGoal(goalId: "3", name: "Eat healthy", completed: false)
-    ]
-    
-    let checkin = DailyCheckin(
-        id: "1",
-        userId: "user123",
-        date: Date(),
-        completedGoals: goals,
-        notes: "Had a good day!",
-        imageUrls: ["https://example.com/image.jpg"],
-        timestamp: Date()
-    )
-    
-    return EditDailyCheckinView(checkin: checkin, userId: "user123")
-        .environmentObject(AuthManager.shared)
-        .environmentObject(ThemeManager())
 }

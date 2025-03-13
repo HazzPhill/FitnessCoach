@@ -57,9 +57,19 @@ struct ColorSchemeSelectionView: View {
                 }
                 .padding(.bottom, 20)
             }
+            .scrollContentBackground(.hidden)
+        }
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                ModernBackButton()
+                    .environmentObject(themeManager)
+            }
         }
         .navigationTitle("Color Scheme")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(themeManager.backgroundColor(for: colorScheme), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
     }
 }
 

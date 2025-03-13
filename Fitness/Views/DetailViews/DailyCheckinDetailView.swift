@@ -77,6 +77,29 @@ struct DailyCheckinDetailView: View {
                 }
                 .ignoresSafeArea(edges: .top)
                 
+                // Custom back button
+                HStack {
+                    Button {
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Back")
+                                .font(themeManager.bodyFont(size: 16))
+                        }
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(
+                            Capsule()
+                                .fill(themeManager.accentColor(for: colorScheme).opacity(0.2))
+                        )
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal)
+                
                 // Title & Date with conditional edit button
                 HStack {
                     Text(formattedDay(from: checkin.date))
@@ -106,6 +129,7 @@ struct DailyCheckinDetailView: View {
                     }
                 }
                 .padding(.horizontal)
+                
                 
                 // Goal completion status
                 HStack(spacing: 16) {

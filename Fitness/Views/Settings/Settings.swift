@@ -198,8 +198,18 @@ struct SettingsView: View {
                     .scrollContentBackground(.hidden)
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle("")
+            .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    ModernBackButton()
+                        .environmentObject(themeManager)
+                }
+            }
+            .toolbarBackground(themeManager.backgroundColor(for: colorScheme), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             // MARK: Group image picker (for coaches)
             .photosPicker(isPresented: $showingGroupImagePicker, selection: $selectedGroupItem, matching: .images)
             .onChange(of: selectedGroupItem) { newItem in

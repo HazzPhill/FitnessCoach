@@ -72,8 +72,18 @@ struct AccountSettings: View {
             }
             .scrollContentBackground(.hidden)
         }
-        .navigationTitle("Account Settings")
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                ModernBackButton()
+                    .environmentObject(themeManager)
+            }
+        }
+        .navigationTitle("")
+        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(themeManager.backgroundColor(for: colorScheme), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .photosPicker(isPresented: $showingProfileImagePicker, selection: $selectedProfileItem, matching: .images)
         .onChange(of: selectedProfileItem) { newItem in
             Task {

@@ -88,11 +88,33 @@ struct UpdateDetailView: View {
                 }
                 .ignoresSafeArea(edges: .top)
                 
+                // Custom back button
+                HStack {
+                    Button {
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Back")
+                                .font(themeManager.bodyFont(size: 16))
+                        }
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(
+                            Capsule()
+                                .fill(themeManager.accentColor(for: colorScheme).opacity(0.2))
+                        )
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal)
+                
                 // Title & Date with conditional edit/delete buttons
                 HStack {
                     Text(update.name)
-                        .font(.title2)
-                        .fontWeight(.semibold)
+                        .font(themeManager.titleFont(size: 22))
                         .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                     
                     Spacer()
@@ -100,7 +122,7 @@ struct UpdateDetailView: View {
                     HStack(spacing: 8) {
                         if let date = update.date {
                             Text(date.formattedWithOrdinal())
-                                .font(.footnote)
+                                .font(themeManager.captionFont())
                                 .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                         }
                         
@@ -203,6 +225,7 @@ struct UpdateDetailView: View {
             }
         } message: {
             Text("Are you sure you want to delete this weekly check-in? This action cannot be undone.")
+                .font(themeManager.bodyFont())
         }
     }
     
@@ -242,40 +265,50 @@ struct ScoresBoxView: View {
             // Individual score rows
             HStack {
                 Text("Calories")
+                    .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
                 Spacer()
                 Text("\(Int(calories))/7")
+                    .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
             }
             HStack {
                 Text("Protein")
+                    .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
                 Spacer()
                 Text("\(Int(protein))/7")
+                    .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
             }
             HStack {
                 Text("Steps")
+                    .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
                 Spacer()
                 Text("\(Int(steps))/7")
+                    .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
             }
             HStack {
                 Text("Training")
+                    .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
                 Spacer()
                 Text("\(Int(training))/5")
+                    .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
             }
             
             // Total row
             HStack {
                 Text("Total")
+                    .font(themeManager.bodyFont())
                     .fontWeight(.semibold)
                     .foregroundColor(themeManager.textColor(for: colorScheme))
                 Spacer()
                 Text(String(format: "%.0f/10", total))
+                    .font(themeManager.bodyFont())
                     .fontWeight(.semibold)
                     .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
             }
