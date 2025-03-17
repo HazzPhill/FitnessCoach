@@ -34,16 +34,16 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		39ACD9842D51694000E3EF3C /* Wardy Fitness Coach.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Wardy Fitness Coach.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		39ACD9842D51694000E3EF3C /* Coach by Wardy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Coach by Wardy.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		39DE31E12D7EF9CE005988BE /* Exceptions for "Fitness" folder in "Wardy Fitness Coach" target */ = {
+		39DE31E12D7EF9CE005988BE /* Exceptions for "Fitness" folder in "Coach by Wardy" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 39ACD9832D51694000E3EF3C /* Wardy Fitness Coach */;
+			target = 39ACD9832D51694000E3EF3C /* Coach by Wardy */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -51,7 +51,7 @@
 		39ACD9862D51694000E3EF3C /* Fitness */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				39DE31E12D7EF9CE005988BE /* Exceptions for "Fitness" folder in "Wardy Fitness Coach" target */,
+				39DE31E12D7EF9CE005988BE /* Exceptions for "Fitness" folder in "Coach by Wardy" target */,
 			);
 			path = Fitness;
 			sourceTree = "<group>";
@@ -104,7 +104,7 @@
 		39ACD9852D51694000E3EF3C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				39ACD9842D51694000E3EF3C /* Wardy Fitness Coach.app */,
+				39ACD9842D51694000E3EF3C /* Coach by Wardy.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -112,9 +112,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		39ACD9832D51694000E3EF3C /* Wardy Fitness Coach */ = {
+		39ACD9832D51694000E3EF3C /* Coach by Wardy */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 39ACD9942D51694200E3EF3C /* Build configuration list for PBXNativeTarget "Wardy Fitness Coach" */;
+			buildConfigurationList = 39ACD9942D51694200E3EF3C /* Build configuration list for PBXNativeTarget "Coach by Wardy" */;
 			buildPhases = (
 				39ACD9802D51694000E3EF3C /* Sources */,
 				39ACD9812D51694000E3EF3C /* Frameworks */,
@@ -127,7 +127,7 @@
 			fileSystemSynchronizedGroups = (
 				39ACD9862D51694000E3EF3C /* Fitness */,
 			);
-			name = "Wardy Fitness Coach";
+			name = "Coach by Wardy";
 			packageProductDependencies = (
 				39ACD99F2D516B5900E3EF3C /* FirebaseAnalytics */,
 				39ACD9A12D516B5900E3EF3C /* FirebaseAnalyticsOnDeviceConversion */,
@@ -155,7 +155,7 @@
 				39A5CE852D54F9560039FDEC /* CachedAsyncImage */,
 			);
 			productName = Fitness;
-			productReference = 39ACD9842D51694000E3EF3C /* Wardy Fitness Coach.app */;
+			productReference = 39ACD9842D51694000E3EF3C /* Coach by Wardy.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -173,7 +173,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 39ACD97F2D51694000E3EF3C /* Build configuration list for PBXProject "Wardy Fitness Coach" */;
+			buildConfigurationList = 39ACD97F2D51694000E3EF3C /* Build configuration list for PBXProject "Coach by Wardy" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -191,7 +191,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				39ACD9832D51694000E3EF3C /* Wardy Fitness Coach */,
+				39ACD9832D51694000E3EF3C /* Coach by Wardy */,
 			);
 		};
 /* End PBXProject section */
@@ -364,11 +364,15 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Harry.WardyFitnessCoach;
+				PRODUCT_BUNDLE_IDENTIFIER = Harry.WardyCoachFitnessnew;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -400,18 +404,22 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Harry.WardyFitnessCoach;
+				PRODUCT_BUNDLE_IDENTIFIER = Harry.WardyCoachFitnessnew;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		39ACD97F2D51694000E3EF3C /* Build configuration list for PBXProject "Wardy Fitness Coach" */ = {
+		39ACD97F2D51694000E3EF3C /* Build configuration list for PBXProject "Coach by Wardy" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				39ACD9922D51694200E3EF3C /* Debug */,
@@ -420,7 +428,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		39ACD9942D51694200E3EF3C /* Build configuration list for PBXNativeTarget "Wardy Fitness Coach" */ = {
+		39ACD9942D51694200E3EF3C /* Build configuration list for PBXNativeTarget "Coach by Wardy" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				39ACD9952D51694200E3EF3C /* Debug */,

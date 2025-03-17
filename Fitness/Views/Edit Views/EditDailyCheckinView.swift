@@ -34,6 +34,7 @@ struct EditDailyCheckinView: View {
                     .ignoresSafeArea()
                 
                 Form {
+                    // Goals section
                     Section(header: Text("Daily Goals")
                         .font(themeManager.headingFont(size: 16))
                         .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))) {
@@ -42,35 +43,21 @@ struct EditDailyCheckinView: View {
                                 .font(themeManager.bodyFont())
                                 .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                         } else {
-                            ForEach(viewModel.goalsList) { goal in
-                                if let goalIndex = completedGoals.firstIndex(where: { $0.goalId == goal.id }) {
-                                    Toggle(getGoalDisplayText(goal), isOn: $completedGoals[goalIndex].completed)
-                                        .font(themeManager.bodyFont())
-                                        .tint(themeManager.accentColor(for: colorScheme))
-                                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
-                                } else {
-                                    // This goal was added after the check-in was created
-                                    Toggle(getGoalDisplayText(goal), isOn: Binding(
-                                        get: { false },
-                                        set: { newValue in
-                                            if newValue {
-                                                completedGoals.append(CompletedGoal(
-                                                    goalId: goal.id,
-                                                    name: getGoalDisplayText(goal),
-                                                    completed: true
-                                                ))
-                                            }
-                                        }
-                                    ))
-                                    .font(themeManager.bodyFont())
-                                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme).opacity(0.6))
-                                    .tint(themeManager.accentColor(for: colorScheme))
+                            VStack(spacing: 12) {
+                                // Regular goals
+                                ForEach(viewModel.goalsList) { goal in
+                                    createGoalToggle(for: goal)
                                 }
+                                
+                                // Water toggle
+                                createWaterToggle()
                             }
+                            .padding(.vertical, 8)
                         }
                     }
                     .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     
+                    // Notes section
                     Section(header: Text("Notes")
                         .font(themeManager.headingFont(size: 16))
                         .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))) {
@@ -83,6 +70,7 @@ struct EditDailyCheckinView: View {
                     }
                     .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     
+                    // Existing Photos section
                     Section(header: Text("Existing Photos")
                         .font(themeManager.headingFont(size: 16))
                         .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))) {
@@ -137,6 +125,7 @@ struct EditDailyCheckinView: View {
                     }
                     .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     
+                    // Add New Photos section
                     Section(header: Text("Add New Photos")
                         .font(themeManager.headingFont(size: 16))
                         .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))) {
@@ -178,6 +167,7 @@ struct EditDailyCheckinView: View {
                     }
                     .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     
+                    // Error message
                     if let errorMessage = errorMessage {
                         Section {
                             Text(errorMessage)
@@ -204,7 +194,7 @@ struct EditDailyCheckinView: View {
                         }
                         .disabled(completedGoals.isEmpty)
                         .font(themeManager.bodyFont())
-                        .foregroundColor(themeManager.accentColor(for: colorScheme))
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                     }
                 }
             
@@ -214,7 +204,7 @@ struct EditDailyCheckinView: View {
                         deleteCheckin()
                     }
                     .font(themeManager.bodyFont())
-                    .foregroundColor(themeManager.accentColor(for: colorScheme))
+                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                 }
             }
             .navigationTitle("")
@@ -224,6 +214,97 @@ struct EditDailyCheckinView: View {
             .onChange(of: selectedItems) { newValue in
                 loadSelectedImages(from: newValue)
             }
+            .onAppear {
+                ensureWaterGoalExists()
+            }
+        }
+    }
+    
+    // Helper methods for creating toggles
+    private func createGoalToggle(for goal: GoalItem) -> some View {
+        // Check if the goal already exists in the completedGoals array
+        if let goalIndex = completedGoals.firstIndex(where: { $0.goalId == goal.id }) {
+            // Direct binding for existing goal
+            return PulseToggle(
+                label: getGoalDisplayText(goal),
+                isOn: $completedGoals[goalIndex].completed,
+                accentColor: themeManager.accentColor(for: colorScheme),
+                textColor: themeManager.accentOrWhiteText(for: colorScheme),
+                font: themeManager.bodyFont()
+            )
+        } else {
+            // For goals added after the check-in was created
+            let goalId = goal.id
+            let goalName = getGoalDisplayText(goal)
+            
+            // Create a simplified binding that just adds the goal when toggled on
+            let binding = Binding<Bool>(
+                get: { false }, // Always starts as false
+                set: { newValue in
+                    if newValue {
+                        completedGoals.append(CompletedGoal(
+                            goalId: goalId,
+                            name: goalName,
+                            completed: true
+                        ))
+                    }
+                }
+            )
+            
+            return PulseToggle(
+                label: goalName,
+                isOn: binding,
+                accentColor: themeManager.accentColor(for: colorScheme),
+                textColor: themeManager.accentOrWhiteText(for: colorScheme).opacity(0.6),
+                font: themeManager.bodyFont()
+            )
+        }
+    }
+    
+    private func createWaterToggle() -> some View {
+        // Check if water goal exists
+        if let waterIndex = completedGoals.firstIndex(where: { $0.goalId == "water" }) {
+            // Use direct binding for existing water goal
+            return PulseToggle(
+                label: "Drank 3L water",
+                isOn: $completedGoals[waterIndex].completed,
+                accentColor: themeManager.accentColor(for: colorScheme),
+                textColor: themeManager.accentOrWhiteText(for: colorScheme),
+                font: themeManager.bodyFont()
+            )
+        } else {
+            // Create a binding for a new water goal
+            let binding = Binding<Bool>(
+                get: { false },
+                set: { newValue in
+                    if newValue {
+                        completedGoals.append(CompletedGoal(
+                            goalId: "water",
+                            name: "Drank 3L water",
+                            completed: true
+                        ))
+                    }
+                }
+            )
+            
+            return PulseToggle(
+                label: "Drank 3L water",
+                isOn: binding,
+                accentColor: themeManager.accentColor(for: colorScheme),
+                textColor: themeManager.accentOrWhiteText(for: colorScheme),
+                font: themeManager.bodyFont()
+            )
+        }
+    }
+    
+    private func ensureWaterGoalExists() {
+        // Make sure the water goal exists
+        if !completedGoals.contains(where: { $0.goalId == "water" }) {
+            completedGoals.append(CompletedGoal(
+                goalId: "water",
+                name: "Drank 3L water",
+                completed: false
+            ))
         }
     }
     
@@ -258,6 +339,9 @@ struct EditDailyCheckinView: View {
             errorMessage = "Invalid check-in ID"
             return
         }
+        
+        // Make sure the water goal is included
+        ensureWaterGoalExists()
         
         isSubmitting = true
         Task {

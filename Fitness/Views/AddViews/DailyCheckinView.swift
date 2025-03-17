@@ -34,28 +34,59 @@ struct DailyCheckinView: View {
                                 .font(themeManager.bodyFont())
                                 .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                         } else {
-                            ForEach(viewModel.goalsList) { goal in
-                                Toggle(getGoalDisplayText(goal), isOn: Binding(
-                                    get: {
-                                        completedGoals.first(where: { $0.goalId == goal.id })?.completed ?? false
-                                    },
-                                    set: { newValue in
-                                        if let index = completedGoals.firstIndex(where: { $0.goalId == goal.id }) {
-                                            completedGoals[index].completed = newValue
-                                        } else {
-                                            // Use the formatted display name including the value
-                                            completedGoals.append(CompletedGoal(
-                                                goalId: goal.id,
-                                                name: getGoalDisplayText(goal),
-                                                completed: newValue
-                                            ))
+                            // Use VStack for custom toggles since they won't work directly in Form
+                            VStack(spacing: 12) {
+                                ForEach(viewModel.goalsList) { goal in
+                                    PulseToggle(
+                                        label: getGoalDisplayText(goal),
+                                        isOn: Binding(
+                                            get: {
+                                                completedGoals.first(where: { $0.goalId == goal.id })?.completed ?? false
+                                            },
+                                            set: { newValue in
+                                                if let index = completedGoals.firstIndex(where: { $0.goalId == goal.id }) {
+                                                    completedGoals[index].completed = newValue
+                                                } else {
+                                                    // Use the formatted display name including the value
+                                                    completedGoals.append(CompletedGoal(
+                                                        goalId: goal.id,
+                                                        name: getGoalDisplayText(goal),
+                                                        completed: newValue
+                                                    ))
+                                                }
+                                            }
+                                        ),
+                                        accentColor: themeManager.accentColor(for: colorScheme),
+                                        textColor: themeManager.textColor(for: colorScheme),
+                                        font: themeManager.bodyFont()
+                                    )
+                                }
+                                
+                                // Water intake toggle
+                                PulseToggle(
+                                    label: "Drank 3L water",
+                                    isOn: Binding(
+                                        get: {
+                                            completedGoals.first(where: { $0.goalId == "water" })?.completed ?? false
+                                        },
+                                        set: { newValue in
+                                            if let index = completedGoals.firstIndex(where: { $0.goalId == "water" }) {
+                                                completedGoals[index].completed = newValue
+                                            } else {
+                                                completedGoals.append(CompletedGoal(
+                                                    goalId: "water",
+                                                    name: "Drank 3L water",
+                                                    completed: newValue
+                                                ))
+                                            }
                                         }
-                                    }
-                                ))
-                                .tint(themeManager.accentColor(for: colorScheme))
-                                .foregroundColor(themeManager.textColor(for: colorScheme))
-                                .font(themeManager.bodyFont())
+                                    ),
+                                    accentColor: themeManager.accentColor(for: colorScheme),
+                                    textColor: themeManager.textColor(for: colorScheme),
+                                    font: themeManager.bodyFont()
+                                )
                             }
+                            .padding(.vertical, 8)
                         }
                     }
                     .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
@@ -70,9 +101,22 @@ struct DailyCheckinView: View {
                     }
                     .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                     
-                    Section(header: Text("Photos")
+                    Section(header: Text("Photos (Required)")
                         .font(themeManager.headingFont(size: 18))
                         .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))) {
+                        
+                        if selectedImages.isEmpty {
+                            // Visual indicator that photos are required
+                            HStack {
+                                Image(systemName: "exclamationmark.circle")
+                                    .foregroundColor(.red)
+                                Text("At least one photo is required")
+                                    .font(themeManager.bodyFont(size: 14))
+                                    .foregroundColor(.red)
+                            }
+                            .padding(.vertical, 8)
+                        }
+                        
                         PhotosPicker(selection: $selectedItems, matching: .images, photoLibrary: .shared()) {
                             Label("Select Photos", systemImage: "photo.on.rectangle.angled")
                                 .font(themeManager.bodyFont())
@@ -123,7 +167,6 @@ struct DailyCheckinView: View {
                 .scrollContentBackground(.hidden)
             }
             .navigationTitle("")
-            // Using the standard toolbar for now as the modifier can cause conflicts
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     if isSubmitting {
@@ -132,9 +175,11 @@ struct DailyCheckinView: View {
                         Button("Submit") {
                             submitCheckin()
                         }
-                        .disabled(viewModel.goalsList.isEmpty)
+                        // Disable the button if goals list is empty OR no photos uploaded
+                        .disabled(viewModel.goalsList.isEmpty || selectedImages.isEmpty)
                         .font(themeManager.bodyFont())
                         .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                        .opacity(selectedImages.isEmpty ? 0.5 : 1.0) // Visual indicator
                     }
                 }
                 ToolbarItem(placement: .cancellationAction) {
@@ -157,6 +202,15 @@ struct DailyCheckinView: View {
                             name: getGoalDisplayText(goal),
                             completed: false
                         )
+                    }
+                    
+                    // Add the water goal to the list if it doesn't exist
+                    if !completedGoals.contains(where: { $0.goalId == "water" }) {
+                        completedGoals.append(CompletedGoal(
+                            goalId: "water",
+                            name: "Drank 3L water",
+                            completed: false
+                        ))
                     }
                 }
             }
@@ -191,6 +245,12 @@ struct DailyCheckinView: View {
             return
         }
         
+        // Make sure at least one photo is included
+        if selectedImages.isEmpty {
+            errorMessage = "At least one photo is required."
+            return
+        }
+        
         // Ensure all goals have been included
         for goal in viewModel.goalsList {
             if !completedGoals.contains(where: { $0.goalId == goal.id }) {
@@ -200,6 +260,15 @@ struct DailyCheckinView: View {
                     completed: false
                 ))
             }
+        }
+        
+        // Make sure the water goal is included
+        if !completedGoals.contains(where: { $0.goalId == "water" }) {
+            completedGoals.append(CompletedGoal(
+                goalId: "water",
+                name: "Drank 3L water",
+                completed: false
+            ))
         }
         
         isSubmitting = true

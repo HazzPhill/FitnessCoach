@@ -12,6 +12,10 @@ struct SettingsView: View {
     @State private var selectedGroupItem: PhotosPickerItem?
     @State private var groupImage: UIImage?
     
+    // MARK: For Group actions functionality
+    @State private var showLeaveGroupConfirmation = false
+    @State private var showDeleteGroupConfirmation = false
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -178,6 +182,30 @@ struct SettingsView: View {
                                 .font(themeManager.bodyFont())
                                 .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                                 .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
+                                
+                                // Delete Group button (Coach only)
+                                Button("Delete Group") {
+                                    showDeleteGroupConfirmation = true
+                                }
+                                .font(themeManager.bodyFont())
+                                .foregroundColor(.red)
+                                .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
+                            }
+                        }
+                        
+                        // MARK: Group Actions (Client Only)
+                        if authManager.currentUser?.role == .client && authManager.currentGroup != nil {
+                            Section(header: Text("Group Actions")
+                                .font(themeManager.headingFont(size: 16))
+                                .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
+                                .fontWeight(.bold)) {
+                                
+                                Button("Leave Group") {
+                                    showLeaveGroupConfirmation = true
+                                }
+                                .font(themeManager.bodyFont())
+                                .foregroundColor(.red)
+                                .listRowBackground(themeManager.cardBackgroundColor(for: colorScheme))
                             }
                         }
                         
@@ -220,6 +248,46 @@ struct SettingsView: View {
                         try await authManager.updateGroupPhoto(image: image)
                     }
                 }
+            }
+            // Client: Leave Group confirmation
+            .alert("Leave Group", isPresented: $showLeaveGroupConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Leave Group", role: .destructive) {
+                    leaveGroup()
+                }
+            } message: {
+                Text("Are you sure you want to leave this group? You will need a new code to rejoin.")
+            }
+            // Coach: Delete Group confirmation
+            .alert("Delete Group", isPresented: $showDeleteGroupConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete Group", role: .destructive) {
+                    deleteGroup()
+                }
+            } message: {
+                Text("Are you sure you want to delete this group? This action cannot be undone and all members will be removed.")
+            }
+        }
+    }
+    
+    // Function to handle client leaving a group
+    private func leaveGroup() {
+        Task {
+            do {
+                try await authManager.leaveGroup()
+            } catch {
+                print("Error leaving group: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // Function to handle coach deleting a group
+    private func deleteGroup() {
+        Task {
+            do {
+                try await authManager.deleteGroup()
+            } catch {
+                print("Error deleting group: \(error.localizedDescription)")
             }
         }
     }

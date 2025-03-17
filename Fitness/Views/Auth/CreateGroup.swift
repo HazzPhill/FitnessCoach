@@ -3,6 +3,7 @@ import PhotosUI
 
 struct CreateGroup: View {
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var themeManager: ThemeManager
     @State private var groupName = ""
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImage: UIImage?
@@ -10,7 +11,7 @@ struct CreateGroup: View {
     
     var body: some View {
         NavigationStack {
-            ZStack (alignment: .center){
+            ZStack(alignment: .center) {
                 Color("SecondaryAccent")
                     .ignoresSafeArea()
                 
@@ -20,6 +21,13 @@ struct CreateGroup: View {
                         imageUploadSection
                         groupNameField
                         createButton
+                        
+                        if showError {
+                            Text(authManager.errorMessage ?? "An error occurred")
+                                .font(themeManager.bodyFont(size: 14))
+                                .foregroundColor(.red)
+                                .padding(.horizontal)
+                        }
                     }
                     .padding()
                 }
@@ -30,13 +38,13 @@ struct CreateGroup: View {
     
     // MARK: - Subviews
     private var headerSection: some View {
-        VStack {
+        VStack(spacing: 8) {
             Text("Create Your Group")
-                .font(.system(size: 24, weight: .bold))
+                .font(themeManager.headingFont(size: 28))
                 .foregroundStyle(.white)
             
             Text("Setup your training community")
-                .font(.subheadline)
+                .font(themeManager.bodyFont())
                 .foregroundStyle(.white.opacity(0.8))
         }
     }
@@ -87,13 +95,22 @@ struct CreateGroup: View {
     
     private var createButton: some View {
         Button(action: createGroup) {
-            Text("Create Group")
-                .font(.headline)
-                .foregroundColor(Color("Accent"))
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.white)
-                .clipShape(Capsule())
+            if authManager.isLoading {
+                ProgressView()
+                    .tint(Color("Accent"))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(Color.white)
+                    .clipShape(Capsule())
+            } else {
+                Text("Create Group")
+                    .font(themeManager.bodyFont(size: 16))
+                    .foregroundColor(Color("Accent"))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(Color.white)
+                    .clipShape(Capsule())
+            }
         }
         .disabled(groupName.isEmpty || authManager.isLoading)
         .opacity(groupName.isEmpty ? 0.6 : 1)
@@ -106,6 +123,9 @@ struct CreateGroup: View {
         Task {
             do {
                 try await authManager.createGroup(name: groupName)
+                if let image = selectedImage {
+                    try await authManager.updateGroupPhoto(image: image)
+                }
             } catch {
                 showError = true
                 authManager.errorMessage = error.localizedDescription
@@ -118,5 +138,6 @@ struct CreateGroup_Previews: PreviewProvider {
     static var previews: some View {
         CreateGroup()
             .environmentObject(AuthManager.shared)
+            .environmentObject(ThemeManager())
     }
 }

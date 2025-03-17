@@ -134,7 +134,7 @@ struct UploadMealPlanView: View {
                                     Text("Add Ingredient")
                                         .font(themeManager.bodyFont())
                                 }
-                                .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
+                                .foregroundStyle(Color.white)
                                 .padding()
                                 .frame(maxWidth: .infinity, minHeight: 50)
                                 .background(themeManager.accentColor(for: colorScheme).opacity(0.1))

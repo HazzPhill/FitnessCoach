@@ -139,30 +139,34 @@ class AuthManager: ObservableObject {
     }
     
     func setupYearlyUpdatesListener() {
-        let calendar = Calendar.current
-        let now = Date()
-        guard let startOfYear = calendar.date(from: calendar.dateComponents([.year], from: now)),
-              let endOfYear = calendar.date(byAdding: .year, value: 1, to: startOfYear) else {
-            return
-        }
-        
-        yearlyUpdatesListener = db.collection("updates")
-            .whereField("date", isGreaterThanOrEqualTo: startOfYear)
-            .whereField("date", isLessThan: endOfYear)
-            .order(by: "date", descending: false)
-            .addSnapshotListener { [weak self] snapshot, error in
-                guard let self = self, let snapshot = snapshot else { return }
-                do {
-                    let updates = try snapshot.documents.compactMap { try $0.data(as: Update.self) }
-                    DispatchQueue.main.async {
-                        self.yearlyUpdates = updates
-                    }
-                } catch {
-                    print("Error decoding yearly updates: \(error)")
-                }
+        if let currentUser = auth.currentUser {
+            let calendar = Calendar.current
+            let now = Date()
+            guard let startOfYear = calendar.date(from: calendar.dateComponents([.year], from: now)),
+                  let endOfYear = calendar.date(byAdding: .year, value: 1, to: startOfYear) else {
+                return
             }
+            
+            yearlyUpdatesListener?.remove()
+            
+            yearlyUpdatesListener = db.collection("updates")
+                .whereField("userId", isEqualTo: currentUser.uid)  // Using auth.currentUser.uid directly
+                .whereField("date", isGreaterThanOrEqualTo: startOfYear)
+                .whereField("date", isLessThan: endOfYear)
+                .order(by: "date", descending: false)
+                .addSnapshotListener { [weak self] snapshot, error in
+                    guard let self = self, let snapshot = snapshot else { return }
+                    do {
+                        let updates = try snapshot.documents.compactMap { try $0.data(as: Update.self) }
+                        DispatchQueue.main.async {
+                            self.yearlyUpdates = updates
+                        }
+                    } catch {
+                        print("Error decoding yearly updates: \(error)")
+                    }
+                }
+        }
     }
-    
     
 
     func cleanupOldCheckins() async {
@@ -277,22 +281,72 @@ class AuthManager: ObservableObject {
 
     func joinGroup(code: String) async throws {
         guard let user = auth.currentUser else {
+            print("❌ Join Group Error: No authenticated user")
             throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
+        
         isLoading = true
         defer { isLoading = false }
-        let snapshot = try await db.collection("groups")
-            .whereField("code", isEqualTo: code.uppercased())
-            .getDocuments()
-        guard let groupDoc = snapshot.documents.first else {
-            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid group code"])
+        
+        do {
+            print("🔍 Searching for group with code: \(code.uppercased())")
+            
+            // First, find the group with this code - using uppercased code
+            let snapshot = try await db.collection("groups")
+                .whereField("code", isEqualTo: code.uppercased())
+                .getDocuments()
+            
+            guard let groupDoc = snapshot.documents.first else {
+                print("❌ Join Group Error: No group found with code \(code.uppercased())")
+                throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid group code"])
+            }
+            
+            let groupId = groupDoc.documentID
+            print("✅ Found group with ID: \(groupId)")
+            
+            // Print current members for debugging
+            if let currentMembers = groupDoc.data()["members"] as? [String] {
+                print("👥 Current group members: \(currentMembers)")
+            }
+            
+            // Update both the group and user documents
+            print("📝 Updating group and user documents")
+            
+            // First update the user document
+            print("👤 Updating user document for ID: \(user.uid) with groupId: \(groupId)")
+            try await db.collection("users").document(user.uid).updateData([
+                "groupId": groupId
+            ])
+            
+            // Then update the group document
+            print("👥 Adding user \(user.uid) to group \(groupId) members")
+            try await db.collection("groups").document(groupId).updateData([
+                "members": FieldValue.arrayUnion([user.uid])
+            ])
+            
+            print("✅ Database updates successful")
+            
+            // Get the updated group document
+            let updatedGroup = try await db.collection("groups").document(groupId).getDocument(as: Group.self)
+            
+            // Update local state immediately
+            if var updatedUser = self.currentUser {
+                updatedUser.groupId = groupId
+                print("⚙️ Updating local state: currentUser.groupId = \(groupId)")
+                self.currentUser = updatedUser
+                self.currentGroup = updatedGroup
+                print("⚙️ Updated currentGroup: \(String(describing: updatedGroup.name)) with \(updatedGroup.members.count) members")
+            }
+            
+            // Re-setup listeners to ensure data is fresh
+            print("🔄 Re-setting up group listener")
+            setupGroupListener(groupId: groupId)
+            
+            print("✅ Successfully joined group: \(updatedGroup.name)")
+        } catch {
+            print("❌ Join Group Error: \(error.localizedDescription)")
+            throw error
         }
-        let batch = db.batch()
-        let groupRef = db.collection("groups").document(groupDoc.documentID)
-        let userRef = db.collection("users").document(user.uid)
-        batch.updateData(["members": FieldValue.arrayUnion([user.uid])], forDocument: groupRef)
-        batch.updateData(["groupId": groupDoc.documentID], forDocument: userRef)
-        try await batch.commit()
     }
     
     func createGroup(name: String) async throws -> Group {
@@ -374,22 +428,29 @@ class AuthManager: ObservableObject {
     }
     
     func setupUpdatesListener() {
-        updatesListener = db.collection("updates")
-            .order(by: "date", descending: true)
-            .limit(to: 5)
-            .addSnapshotListener { [weak self] snapshot, error in
-                guard let self = self, let snapshot = snapshot else { return }
-                do {
-                    let updates = try snapshot.documents.compactMap { doc -> Update? in
-                        try doc.data(as: Update.self)
+        if let currentUser = auth.currentUser {
+            print("Setting up updates for: \(currentUser.uid)")
+            
+            updatesListener?.remove()
+            
+            updatesListener = db.collection("updates")
+                .whereField("userId", isEqualTo: currentUser.uid)  // Using auth.currentUser.uid directly
+                .order(by: "date", descending: true)
+                .addSnapshotListener { [weak self] snapshot, error in
+                    guard let self = self, let snapshot = snapshot else { return }
+                    do {
+                        let updates = try snapshot.documents.compactMap { doc -> Update? in
+                            try doc.data(as: Update.self)
+                        }
+                        DispatchQueue.main.async {
+                            self.latestUpdates = updates
+                            print("Found \(updates.count) updates for current user")
+                        }
+                    } catch {
+                        print("Error decoding updates: \(error.localizedDescription)")
                     }
-                    DispatchQueue.main.async {
-                        self.latestUpdates = updates
-                    }
-                } catch {
-                    print("Error decoding updates: \(error.localizedDescription)")
                 }
-            }
+        }
     }
     
     func addUpdate(name: String, weight: Double, image: UIImage?, biggestWin: String, issues: String, extraCoachRequest: String, finalScore: Double) async throws {
@@ -703,3 +764,119 @@ enum UserRole: String, Codable, CaseIterable {
     case coach, client
 }
 
+// Add this method to your AuthManager class
+
+extension AuthManager {
+    func updateUserName(firstName: String, lastName: String) async throws {
+        guard let currentUser = currentUser else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [
+                NSLocalizedDescriptionKey: "User not authenticated"
+            ])
+        }
+        
+        // Update in Firestore
+        let userRef = db.collection("users").document(currentUser.userId)
+        try await userRef.updateData([
+            "firstName": firstName,
+            "lastName": lastName
+        ])
+        
+        // Create a new DBUser with updated values
+        self.currentUser = DBUser(
+            userId: currentUser.userId,
+            firstName: firstName,
+            lastName: lastName,
+            email: currentUser.email,
+            role: currentUser.role,
+            groupId: currentUser.groupId,
+            profileImageUrl: currentUser.profileImageUrl,
+            createdAt: currentUser.createdAt
+        )
+    }
+}
+
+// MARK: - Extension to AuthManager for group actions
+extension AuthManager {
+    // For clients to leave a group
+    func leaveGroup() async throws {
+        guard let user = auth.currentUser, let currentUser = self.currentUser else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
+        }
+        
+        guard let groupId = currentUser.groupId, let group = self.currentGroup else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not in a group"])
+        }
+        
+        // Create a batch operation
+        let batch = db.batch()
+        
+        // 1. Remove user from group's members array
+        let groupRef = db.collection("groups").document(groupId)
+        batch.updateData([
+            "members": FieldValue.arrayRemove([user.uid])
+        ], forDocument: groupRef)
+        
+        // 2. Remove groupId from user's document
+        let userRef = db.collection("users").document(user.uid)
+        batch.updateData([
+            "groupId": FieldValue.delete()
+        ], forDocument: userRef)
+        
+        // Execute the batch
+        try await batch.commit()
+        
+        // Update the local state
+        if var updatedUser = self.currentUser {
+            updatedUser.groupId = nil
+            self.currentUser = updatedUser
+            self.currentGroup = nil
+        }
+    }
+    
+    // For coaches to delete a group
+    func deleteGroup() async throws {
+        guard let user = auth.currentUser, let currentUser = self.currentUser, currentUser.role == .coach else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Only coaches can delete groups"])
+        }
+        
+        guard let groupId = currentUser.groupId, let group = self.currentGroup else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "No group to delete"])
+        }
+        
+        // Verify this coach owns the group
+        guard group.coachId == user.uid else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "You can only delete groups you own"])
+        }
+        
+        // Get all members of the group
+        let groupRef = db.collection("groups").document(groupId)
+        let groupDoc = try await groupRef.getDocument()
+        guard let groupData = groupDoc.data(), let members = groupData["members"] as? [String] else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Could not get group members"])
+        }
+        
+        // Create a batch operation
+        let batch = db.batch()
+        
+        // 1. Remove groupId from all member documents
+        for memberId in members {
+            let memberRef = db.collection("users").document(memberId)
+            batch.updateData([
+                "groupId": FieldValue.delete()
+            ], forDocument: memberRef)
+        }
+        
+        // 2. Delete the group document
+        batch.deleteDocument(groupRef)
+        
+        // Execute the batch
+        try await batch.commit()
+        
+        // Update the local state
+        if var updatedUser = self.currentUser {
+            updatedUser.groupId = nil
+            self.currentUser = updatedUser
+            self.currentGroup = nil
+        }
+    }
+}

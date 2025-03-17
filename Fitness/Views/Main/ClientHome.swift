@@ -13,6 +13,9 @@ struct ClientHome: View {
     @State private var showingAddUpdate = false  // For weekly check-ins
     @State private var showingAddDailyCheckin = false // For daily check-ins
     @State private var refreshDailyCheckins = false // Trigger for refreshing daily check-ins
+    @State private var canAddDailyCheckin: Bool = true // Track if user can add a check-in today
+    @State private var checkinsCount: Int = 0 // Used to track changes in checkins array
+    
     @StateObject private var weightViewModel: WeightEntriesViewModel
     @Namespace private var namespace
     @Namespace private var updatezoom
@@ -121,7 +124,6 @@ struct ClientHome: View {
                                                 if isMostVisible && currentVisibleDay != day {
                                                     currentVisibleDay = day
                                                     hapticFeedback.impactOccurred(intensity: 1.2)
-                                                    print("Now visible: \(day)")
                                                 }
                                             }
                                         }
@@ -145,7 +147,7 @@ struct ClientHome: View {
                             }
                         }
                         
-                        // IMPROVED: Daily Check-ins Section with better animations and update handling
+                        // IMPROVED: Daily Check-ins Section with conditional button
                         HStack {
                             Text("Daily Check-ins")
                                 .font(themeManager.headingFont(size:18))
@@ -158,12 +160,16 @@ struct ClientHome: View {
                             } label: {
                                 Circle()
                                     .frame(width: 30, height: 30)
-                                    .foregroundStyle(themeManager.accentColor(for: colorScheme))
+                                    .foregroundStyle(canAddDailyCheckin ?
+                                        themeManager.accentColor(for: colorScheme) :
+                                        Color.gray.opacity(0.5))
                                     .overlay(
                                         Image(systemName: "plus")
                                             .foregroundStyle(.white)
                                     )
                             }
+                            .disabled(!canAddDailyCheckin)
+                               .opacity(canAddDailyCheckin ? 1.0 : 0.3)
                         }
 
                         // UPDATED: LazyVStack for better performance
@@ -200,6 +206,10 @@ struct ClientHome: View {
                         .onChange(of: refreshDailyCheckins) { _ in
                             // Force immediate refresh when this value changes
                             authManager.refreshDailyCheckins()
+                            // Update the checkins count to track changes
+                            checkinsCount = authManager.dailyCheckins.count
+                            // Check if user can add a daily checkin
+                            checkDailyCheckinStatus()
                         }
                         
                         // Weekly Check-ins Section
@@ -279,6 +289,7 @@ struct ClientHome: View {
                 // Force refresh when sheet is dismissed
                 withAnimation {
                     refreshDailyCheckins.toggle()
+                    // Check if user can add a check-in after dismissal (handled in onChange of refreshDailyCheckins)
                 }
             }) {
                 DailyCheckinView(userId: client.userId)
@@ -294,7 +305,39 @@ struct ClientHome: View {
             .onAppear {
                 // Make sure daily check-ins are refreshed when the view appears
                 authManager.refreshDailyCheckins()
+                // Initialize the checkins count
+                checkinsCount = authManager.dailyCheckins.count
+                // Check if user can add a check-in today
+                checkDailyCheckinStatus()
             }
+            // Use a timer to periodically check status (handles deletion case)
+            .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
+                // Only update if the count has changed
+                if checkinsCount != authManager.dailyCheckins.count {
+                    checkinsCount = authManager.dailyCheckins.count
+                    checkDailyCheckinStatus()
+                }
+            }
+        }
+    }
+    
+    // Check if user has already submitted a check-in today
+    private func checkDailyCheckinStatus() {
+        // Get today's date at midnight
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        
+        // Check if there's a check-in for today in the daily check-ins array
+        let hasCheckinForToday = authManager.dailyCheckins.contains { checkin in
+            if let checkinDate = checkin.date {
+                return calendar.isDate(calendar.startOfDay(for: checkinDate), inSameDayAs: today)
+            }
+            return false
+        }
+        
+        // Update the state to enable/disable the button
+        withAnimation {
+            canAddDailyCheckin = !hasCheckinForToday
         }
     }
 }

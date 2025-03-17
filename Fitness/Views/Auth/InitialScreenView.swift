@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct InitialScreenView: View {
+    @EnvironmentObject var themeManager: ThemeManager
     @State private var showLoginSheet = false
     @State private var showRegisterSheet = false
 
@@ -11,7 +12,7 @@ struct InitialScreenView: View {
                 .zIndex(0)
             
             GeometryReader { geometry in
-                VStack(alignment:.center,spacing: 0) {
+                VStack(alignment:.center, spacing: 0) {
                     // Top half: Gym background with gradient overlay
                     ZStack {
                         Image("gym_background")
@@ -33,14 +34,13 @@ struct InitialScreenView: View {
                     // Bottom half: Content
                     VStack(alignment: .center) {
                         Text("Manage your \nfitness like a\nboss")
-                            .font(.system(size: 38))
-                            .fontWeight(.semibold)
+                            .font(themeManager.headingFont(size: 38))
                             .foregroundColor(Color("SecondaryAccent"))
                             .multilineTextAlignment(.leading)
                             .frame(width: 350, alignment: .leading)
                             .fixedSize(horizontal: false, vertical: true)
                             .lineLimit(nil)
-                            .layoutPriority(1) // Gives this text view higher priority in layout
+                            .layoutPriority(1)
                             .padding(.bottom, 30)
 
                         // Login Button
@@ -48,7 +48,7 @@ struct InitialScreenView: View {
                             showLoginSheet.toggle()
                         }) {
                             Text("Log in")
-                                .font(.headline)
+                                .font(themeManager.bodyFont(size: 18))
                                 .foregroundColor(.white)
                                 .frame(width: 350, height: 50)
                                 .background(Color("Accent"))
@@ -57,6 +57,7 @@ struct InitialScreenView: View {
                         .padding(.bottom, 20)
                         .sheet(isPresented: $showLoginSheet) {
                             LoginView()
+                                .environmentObject(themeManager)
                                 .presentationDetents([.medium, .large])
                                 .ignoresSafeArea(.all)
                                 .presentationCornerRadius(30)
@@ -64,15 +65,16 @@ struct InitialScreenView: View {
                         
                         // Sign up Hyperlink
                         HStack {
-                            Text("Don’t have an account?")
-                                .font(.footnote)
+                            Text("Don't have an account?")
+                                .font(themeManager.captionFont())
                                 .foregroundColor(Color.gray)
+                            
                             Button(action: {
                                 showRegisterSheet.toggle()
                             }) {
                                 Text("Sign up")
-                                    .underline() // Makes it appear as a link
-                                    .font(.footnote)
+                                    .font(themeManager.captionFont())
+                                    .underline()
                             }
                             .buttonStyle(.plain)
                             .foregroundColor(Color.gray)
@@ -80,6 +82,7 @@ struct InitialScreenView: View {
                         .padding(.bottom, 40)
                         .sheet(isPresented: $showRegisterSheet) {
                             RegisterView()
+                                .environmentObject(themeManager)
                                 .presentationDetents([.large])
                                 .ignoresSafeArea(.all)
                                 .presentationCornerRadius(30)
@@ -93,6 +96,9 @@ struct InitialScreenView: View {
     }
 }
 
-#Preview {
-    InitialScreenView()
+struct InitialScreenView_Previews: PreviewProvider {
+    static var previews: some View {
+        InitialScreenView()
+            .environmentObject(ThemeManager())
+    }
 }
