@@ -158,6 +158,9 @@ struct ClientView: View {
                                 }
                             }
                         }
+
+                        PDFUploadBox(clientId: client.userId)
+                            .environmentObject(themeManager)
                         
                         // Daily Check-ins Section
                         HStack {

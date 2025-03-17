@@ -147,6 +147,9 @@ struct ClientHome: View {
                             }
                         }
                         
+                        PDFViewerBox(clientId: client.userId)
+                            .environmentObject(themeManager)
+                        
                         // IMPROVED: Daily Check-ins Section with conditional button
                         HStack {
                             Text("Daily Check-ins")

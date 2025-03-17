@@ -125,7 +125,7 @@ struct UploadMealPlanView: View {
                             }
                             
                             Button(action: {
-                                ingredients.append(Ingredient(name: "", amount: "", protein: "", calories: "", carbs: "", fats: ""))
+                                ingredients.append(Ingredient(name: "", amount: ""))
                                 // Open the new ingredient's accordion by default.
                                 expandedIngredientIndex = ingredients.count - 1
                             }) {
@@ -203,15 +203,7 @@ struct IngredientAccordionView: View {
             isExpanded: $isExpanded,
             content: {
                 VStack(alignment: .leading, spacing: 10) {
-                    CustomTextField(placeholder: "Amount", text: $ingredient.amount)
-                        .environmentObject(themeManager)
-                    CustomTextField(placeholder: "Protein", text: $ingredient.protein)
-                        .environmentObject(themeManager)
-                    CustomTextField(placeholder: "Calories", text: $ingredient.calories)
-                        .environmentObject(themeManager)
-                    CustomTextField(placeholder: "Carbs", text: $ingredient.carbs)
-                        .environmentObject(themeManager)
-                    CustomTextField(placeholder: "Fats", text: $ingredient.fats)
+                    CustomTextField(placeholder: "Amount (grams)", text: $ingredient.amount)
                         .environmentObject(themeManager)
                 }
                 .padding(.vertical, 5)

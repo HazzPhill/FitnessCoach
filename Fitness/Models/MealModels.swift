@@ -14,13 +14,9 @@ import SwiftUI
 
 // Ingredient model
 struct Ingredient: Codable, Identifiable {
-    var id: String? = UUID().uuidString  // Mark id as optional with a default value
+    var id: String? = UUID().uuidString
     var name: String
-    var amount: String
-    var protein: String
-    var calories: String
-    var carbs: String
-    var fats: String
+    var amount: String  // This will just be the amount in grams
 }
 
 // Meal model – represents a single meal (or snack)

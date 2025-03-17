@@ -27,17 +27,13 @@ class MealPlanManager {
             imageUrl = try await storageRef.downloadURL().absoluteString
         }
         
-        // Prepare the meal dictionary to be stored.
+        // Prepare the meal dictionary to be stored - simplified for new Ingredient model
         let mealData: [String: Any] = [
             "mealName": mealName,
             "imageUrl": imageUrl as Any,
             "ingredients": ingredients.map { [
                 "name": $0.name,
-                "amount": $0.amount,
-                "protein": $0.protein,
-                "calories": $0.calories,
-                "carbs": $0.carbs,
-                "fats": $0.fats
+                "amount": $0.amount
             ]}
         ]
         
