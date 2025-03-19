@@ -11,6 +11,9 @@ struct ClientView: View {
     @StateObject private var checkinsViewModel: ClientDailyCheckinsViewModel
     @StateObject private var weightViewModel: WeightEntriesViewModel
     
+    // Add the client settings view model
+    @StateObject private var settingsViewModel: ClientSettingsViewModel
+    
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.colorScheme) var colorScheme
     
@@ -32,6 +35,7 @@ struct ClientView: View {
         _goalsViewModel = StateObject(wrappedValue: DailyGoalsViewModel(userId: client.userId))
         _checkinsViewModel = StateObject(wrappedValue: ClientDailyCheckinsViewModel(clientId: client.userId))
         _weightViewModel = StateObject(wrappedValue: WeightEntriesViewModel(userId: client.userId))
+        _settingsViewModel = StateObject(wrappedValue: ClientSettingsViewModel(clientId: client.userId))
     }
     
     var body: some View {
@@ -50,27 +54,23 @@ struct ClientView: View {
                             Spacer()
                             if let profileImageUrl = client.profileImageUrl,
                                let url = URL(string: profileImageUrl) {
-                                NavigationLink {
-                                    SettingsView()
-                                } label: {
-                                    CachedAsyncImage(url: url) { phase in
-                                        switch phase {
-                                        case .empty:
-                                            ProgressView().frame(width: 45, height: 45)
-                                        case .success(let image):
-                                            image.resizable()
-                                                .scaledToFill()
-                                                .frame(width: 45, height: 45)
-                                                .clipShape(Circle())
-                                        case .failure(_):
-                                            Image(systemName: "person.circle")
-                                                .resizable()
-                                                .scaledToFill()
-                                                .frame(width: 45, height: 45)
-                                                .clipShape(Circle())
-                                        @unknown default:
-                                            EmptyView()
-                                        }
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .empty:
+                                        ProgressView().frame(width: 45, height: 45)
+                                    case .success(let image):
+                                        image.resizable()
+                                            .scaledToFill()
+                                            .frame(width: 45, height: 45)
+                                            .clipShape(Circle())
+                                    case .failure(_):
+                                        Image(systemName: "person.circle")
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 45, height: 45)
+                                            .clipShape(Circle())
+                                    @unknown default:
+                                        EmptyView()
                                     }
                                 }
                             } else {
@@ -82,167 +82,180 @@ struct ClientView: View {
                             }
                         }
                         
-                        // Weekly Goals Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Text("Weekly Goals")
-                                    .font(themeManager.headingFont(size: 18))
-                                    .foregroundStyle(themeManager.textColor(for: colorScheme))
+                        // Weekly Goals Section - only show if enabled in settings
+                        if settingsViewModel.settings.showWeeklyGoals {
+                            VStack(alignment: .leading, spacing: 12) {
+                                HStack {
+                                    Text("Weekly Goals")
+                                        .font(themeManager.headingFont(size: 18))
+                                        .foregroundStyle(themeManager.textColor(for: colorScheme))
+                                    
+                                    Spacer()
+                                }
                                 
-                                Spacer()
-                            }
-                            
-                            // Goals grid display
-                            LazyVGrid(columns: [
-                                GridItem(.flexible(), spacing: 16),
-                                GridItem(.flexible(), spacing: 16)
-                            ], spacing: 16) {
-                                // Calories goal
-                                goalCard(title: "Calories", value: goalsViewModel.dailyCalories)
-                                
-                                // Steps goal
-                                goalCard(title: "Steps", value: goalsViewModel.dailySteps)
-                                
-                                // Protein goal
-                                goalCard(title: "Protein", value: goalsViewModel.dailyProtein)
-                                
-                                // Training goal
-                                goalCard(title: "Training", value: goalsViewModel.dailyTraining)
+                                // Goals grid display
+                                LazyVGrid(columns: [
+                                    GridItem(.flexible(), spacing: 16),
+                                    GridItem(.flexible(), spacing: 16)
+                                ], spacing: 16) {
+                                    // Calories goal
+                                    goalCard(title: "Calories", value: goalsViewModel.dailyCalories)
+                                    
+                                    // Steps goal
+                                    goalCard(title: "Steps", value: goalsViewModel.dailySteps)
+                                    
+                                    // Protein goal
+                                    goalCard(title: "Protein", value: goalsViewModel.dailyProtein)
+                                    
+                                    // Training goal
+                                    goalCard(title: "Training", value: goalsViewModel.dailyTraining)
+                                }
                             }
                         }
                         
-                        // Progress Section - Now using the complete weight history
-                        Text("Progress")
-                            .font(themeManager.headingFont(size: 18))
-                            .foregroundStyle(themeManager.textColor(for: colorScheme))
-                        WeightGraphView(weightEntries: weightViewModel.weightEntries)
-                            .environmentObject(themeManager)
+                        // Progress Section - only show if enabled in settings
+                        if settingsViewModel.settings.showProgressGraph {
+                            Text("Progress")
+                                .font(themeManager.headingFont(size: 18))
+                                .foregroundStyle(themeManager.textColor(for: colorScheme))
+                            WeightGraphView(weightEntries: weightViewModel.weightEntries)
+                                .environmentObject(themeManager)
+                        }
                         
-                        // Plan Section: Enhanced with scroll effects
-                        Text("Plan")
-                            .font(themeManager.headingFont(size: 18))
-                            .foregroundStyle(themeManager.textColor(for: colorScheme))
-                        
-                        // Enhanced ScrollView with scroll to current day and scale effects
-                        ScrollViewReader { scrollProxy in
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 20) {
-                                    ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { day in
-                                        GeometryReader { geometry in
-                                            DayMealPlanCard(day: day,
-                                                           clientId: client.userId,
-                                                           isCoach: true)
-                                            .environmentObject(themeManager)
-                                            .simultaneousGesture(TapGesture().onEnded {
-                                                let generator = UIImpactFeedbackGenerator(style: .light)
-                                                generator.impactOccurred()
-                                            })
-                                            .scaleEffect(getScaleAmount(geometry: geometry))
-                                            .animation(.easeOut(duration: 0.15), value: geometry.frame(in: .global).midX)
-                                            // Check if this card is the most visible
-                                            .onChange(of: isMostVisible(geometry: geometry)) { isMostVisible in
-                                                if isMostVisible && currentVisibleDay != day {
-                                                    currentVisibleDay = day
-                                                    hapticFeedback.impactOccurred(intensity: 1.2)
+                        // Plan Section - only show if enabled in settings
+                        if settingsViewModel.settings.showMealPlans {
+                            Text("Plan")
+                                .font(themeManager.headingFont(size: 18))
+                                .foregroundStyle(themeManager.textColor(for: colorScheme))
+                            
+                            // Enhanced ScrollView with scroll to current day and scale effects
+                            ScrollViewReader { scrollProxy in
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 20) {
+                                        ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { day in
+                                            GeometryReader { geometry in
+                                                DayMealPlanCard(day: day,
+                                                               clientId: client.userId,
+                                                               isCoach: true)
+                                                .environmentObject(themeManager)
+                                                .simultaneousGesture(TapGesture().onEnded {
+                                                    let generator = UIImpactFeedbackGenerator(style: .light)
+                                                    generator.impactOccurred()
+                                                })
+                                                .scaleEffect(getScaleAmount(geometry: geometry))
+                                                .animation(.easeOut(duration: 0.15), value: geometry.frame(in: .global).midX)
+                                                // Check if this card is the most visible
+                                                .onChange(of: isMostVisible(geometry: geometry)) { isMostVisible in
+                                                    if isMostVisible && currentVisibleDay != day {
+                                                        currentVisibleDay = day
+                                                        hapticFeedback.impactOccurred(intensity: 1.2)
+                                                    }
                                                 }
                                             }
+                                            .id(day)
+                                            .frame(width: 260, height: 400)
                                         }
-                                        .id(day)
-                                        .frame(width: 260, height: 400)
                                     }
+                                    .padding(.vertical)
+                                    .padding(.trailing, 20)
                                 }
-                                .padding(.vertical)
-                                .padding(.trailing, 20)
-                            }
-                            .scrollIndicators(.hidden)
-                            .onAppear {
-                                // Initialize haptic engine
-                                hapticFeedback.prepare()
-                                
-                                // Scroll to current day with animation when view appears
-                                withAnimation {
-                                    scrollProxy.scrollTo(currentDay, anchor: .leading)
-                                    currentVisibleDay = currentDay  // Initialize current visible day
+                                .scrollIndicators(.hidden)
+                                .onAppear {
+                                    // Initialize haptic engine
+                                    hapticFeedback.prepare()
+                                    
+                                    // Scroll to current day with animation when view appears
+                                    withAnimation {
+                                        scrollProxy.scrollTo(currentDay, anchor: .leading)
+                                        currentVisibleDay = currentDay  // Initialize current visible day
+                                    }
                                 }
                             }
                         }
 
-                        PDFUploadBox(clientId: client.userId)
-                            .environmentObject(themeManager)
-                        
-                        // Daily Check-ins Section
-                        HStack {
-                            Text("Daily Check-ins")
-                                .font(themeManager.headingFont(size: 18))
-                                .foregroundStyle(themeManager.textColor(for: colorScheme))
-                            Spacer()
+                        // Training PDF section - only show if enabled in settings
+                        if settingsViewModel.settings.showTrainingPDF {
+                            PDFUploadBox(clientId: client.userId)
+                                .environmentObject(themeManager)
                         }
                         
-                        LazyVStack(spacing: 16) {
-                            if checkinsViewModel.checkins.isEmpty {
-                                Text("No daily check-ins yet.")
-                                    .font(themeManager.bodyFont(size: 16))
-                                    .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
-                                    .padding()
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                            } else {
-                                ForEach(checkinsViewModel.checkins) { checkin in
-                                    NavigationLink {
-                                        DailyCheckinDetailView(checkin: checkin)
-                                            .environmentObject(themeManager)
-                                            .navigationTransition(.zoom(sourceID: checkin.id ?? "", in: checkinNamespace))
-                                    } label: {
-                                        DailyCheckinPreview(checkin: checkin)
-                                            .environmentObject(themeManager)
-                                            .matchedTransitionSource(id: checkin.id ?? "", in: checkinNamespace)
+                        // Daily Check-ins Section - only show if enabled in settings
+                        if settingsViewModel.settings.showDailyCheckins {
+                            HStack {
+                                Text("Daily Check-ins")
+                                    .font(themeManager.headingFont(size: 18))
+                                    .foregroundStyle(themeManager.textColor(for: colorScheme))
+                                Spacer()
+                            }
+                            
+                            LazyVStack(spacing: 16) {
+                                if checkinsViewModel.checkins.isEmpty {
+                                    Text("No daily check-ins yet.")
+                                        .font(themeManager.bodyFont(size: 16))
+                                        .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .center)
+                                } else {
+                                    ForEach(checkinsViewModel.checkins) { checkin in
+                                        NavigationLink {
+                                            DailyCheckinDetailView(checkin: checkin)
+                                                .environmentObject(themeManager)
+                                                .navigationTransition(.zoom(sourceID: checkin.id ?? "", in: checkinNamespace))
+                                        } label: {
+                                            DailyCheckinPreview(checkin: checkin)
+                                                .environmentObject(themeManager)
+                                                .matchedTransitionSource(id: checkin.id ?? "", in: checkinNamespace)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .simultaneousGesture(TapGesture().onEnded {
+                                            let generator = UIImpactFeedbackGenerator(style: .light)
+                                            generator.impactOccurred()
+                                        })
                                     }
-                                    .buttonStyle(.plain)
-                                    .simultaneousGesture(TapGesture().onEnded {
-                                        let generator = UIImpactFeedbackGenerator(style: .light)
-                                        generator.impactOccurred()
-                                    })
                                 }
                             }
                         }
                         
-                        // Updates Section
-                        HStack {
-                            Text("Weekly Check-ins")
-                                .font(themeManager.headingFont(size: 18))
-                                .foregroundStyle(themeManager.textColor(for: colorScheme))
-                            Spacer()
-                        }
-                        ScrollView {
-                            if updatesViewModel.updates.isEmpty {
-                                Text("No weekly check-ins yet.")
-                                    .font(themeManager.bodyFont(size: 16))
-                                    .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
-                                    .padding()
-                            } else {
-                                ForEach(updatesViewModel.updates) { update in
-                                    NavigationLink {
-                                        UpdateDetailView(update: update)
+                        // Updates Section - only show if enabled in settings
+                        if settingsViewModel.settings.showWeeklyCheckins {
+                            HStack {
+                                Text("Weekly Check-ins")
+                                    .font(themeManager.headingFont(size: 18))
+                                    .foregroundStyle(themeManager.textColor(for: colorScheme))
+                                Spacer()
+                            }
+                            ScrollView {
+                                if updatesViewModel.updates.isEmpty {
+                                    Text("No weekly check-ins yet.")
+                                        .font(themeManager.bodyFont(size: 16))
+                                        .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
+                                        .padding()
+                                } else {
+                                    ForEach(updatesViewModel.updates) { update in
+                                        NavigationLink {
+                                            UpdateDetailView(update: update)
+                                                .environmentObject(themeManager)
+                                                .navigationTransition(.zoom(sourceID: update.id, in: namespace))
+                                        } label: {
+                                            UpdatePreview(
+                                                label: update.name,
+                                                Weight: Int(update.weight),
+                                                date: update.date ?? Date(),
+                                                imageUrl: update.imageUrl
+                                            )
                                             .environmentObject(themeManager)
-                                            .navigationTransition(.zoom(sourceID: update.id, in: namespace))
-                                    } label: {
-                                        UpdatePreview(
-                                            label: update.name,
-                                            Weight: Int(update.weight),
-                                            date: update.date ?? Date(),
-                                            imageUrl: update.imageUrl
-                                        )
-                                        .environmentObject(themeManager)
-                                        .matchedTransitionSource(id: update.id, in: namespace)
+                                            .matchedTransitionSource(id: update.id, in: namespace)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .simultaneousGesture(TapGesture().onEnded {
+                                            let generator = UIImpactFeedbackGenerator(style: .light)
+                                            generator.impactOccurred()
+                                        })
                                     }
-                                    .buttonStyle(.plain)
-                                    .simultaneousGesture(TapGesture().onEnded {
-                                        let generator = UIImpactFeedbackGenerator(style: .light)
-                                        generator.impactOccurred()
-                                    })
                                 }
                             }
+                            .scrollIndicators(.hidden)
                         }
-                        .scrollIndicators(.hidden)
                     }
                     .padding()
                 }
@@ -251,12 +264,47 @@ struct ClientView: View {
             .onAppear {
                 // Refresh weight entries when view appears to make sure we have the most current data
                 weightViewModel.fetchAllWeightEntries(userId: client.userId)
+                
+                // Fetch client visibility settings
+                settingsViewModel.fetchSettings()
             }
             .navigationBarBackButtonHidden(true) // Hide the default back button
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     ModernBackButton()
                         .environmentObject(themeManager)
+                }
+                
+                // Add settings button to the navigation bar
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    // Settings button with optional error indicator
+                    NavigationLink(destination: ClientSettingsView(client: client)
+                        .environmentObject(themeManager)) {
+                        ZStack {
+                            // Settings gear icon
+                            Image(systemName: "gearshape.fill")
+                                .foregroundColor(themeManager.accentColor(for: colorScheme))
+                                .font(.system(size: 22))
+                                .frame(width: 24, height: 24)
+                                .background(
+                                    Circle()
+                                        .fill(themeManager.accentColor(for: colorScheme).opacity(0.1))
+                                )
+                            
+                            // Error indicator badge (only shown when there's an error)
+                            if settingsViewModel.errorMessage != nil {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 12, height: 12)
+                                    .overlay(
+                                        Text("!")
+                                            .font(.system(size: 8, weight: .bold))
+                                            .foregroundColor(.white)
+                                    )
+                                    .offset(x: 18, y: -18)
+                            }
+                        }
+                    }
                 }
             }
             // These settings fix the white bar when scrolling by making the navigation bar use theme colors
