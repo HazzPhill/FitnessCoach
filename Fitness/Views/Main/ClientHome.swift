@@ -86,11 +86,25 @@ struct ClientHome: View {
                         
                         WeightGraphView(weightEntries: weightViewModel.weightEntries)
                             .environmentObject(themeManager)
+                        // AFTER:
+                        HStack {
+                            Text("Daily Goals")
+                                .font(themeManager.headingFont(size: 18))
+                                .foregroundStyle(themeManager.textColor(for: colorScheme))
+                            
+                            NavigationLink {
+                                DailyGoalsView(userId: client.userId)
+                            } label: {
+                                Image(systemName: "pencil.circle")
+                                    .foregroundStyle(themeManager.accentColor(for: colorScheme))
+                                    .font(.system(size: 20))
+                            }
+                            .padding(.leading, 4)
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            Spacer()
+                        }
                         
-                        // Daily Goals Grid Section
-                        Text("Daily Goals")
-                            .font(themeManager.headingFont(size: 18))
-                            .foregroundStyle(themeManager.textColor(for: colorScheme))
                         DailyGoalsGridView(userId: client.userId)
                             .environmentObject(themeManager)
                             .padding(.vertical, 6)
@@ -98,6 +112,7 @@ struct ClientHome: View {
                                 RoundedRectangle(cornerRadius: 12)
                                     .fill(themeManager.backgroundColor(for: colorScheme))
                             )
+                      
                         
                         Text("Your Plan")
                             .font(themeManager.headingFont(size: 18))

@@ -17,6 +17,10 @@ struct ClientView: View {
     @Namespace private var namespace
     @Namespace private var checkinNamespace
     
+    // Add states for Training PDF functionality
+    @State private var showTrainingPDFUploader = false
+    @State private var hasPDF = false
+    
     // Add states for scrolling effects and haptic feedback
     @State private var hapticFeedback = UIImpactFeedbackGenerator(style: .rigid)
     @State private var currentVisibleDay: String = ""
@@ -80,9 +84,13 @@ struct ClientView: View {
                         
                         // Weekly Goals Section
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Weekly Goals")
-                                .font(themeManager.headingFont(size: 18))
-                                .foregroundStyle(themeManager.textColor(for: colorScheme))
+                            HStack {
+                                Text("Weekly Goals")
+                                    .font(themeManager.headingFont(size: 18))
+                                    .foregroundStyle(themeManager.textColor(for: colorScheme))
+                                
+                                Spacer()
+                            }
                             
                             // Goals grid display
                             LazyVGrid(columns: [
@@ -254,30 +262,81 @@ struct ClientView: View {
             // These settings fix the white bar when scrolling by making the navigation bar use theme colors
             .toolbarBackground(themeManager.backgroundColor(for: colorScheme), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .sheet(isPresented: $showTrainingPDFUploader) {
+                TrainingPDFViewerScreen(clientId: client.userId, isCoachView: true)
+                    .environmentObject(themeManager)
+            }
         }
     }
     
     // Helper function to create a goal card
     private func goalCard(title: String, value: String) -> some View {
-        VStack(alignment: .leading) {
-            Text(title)
-                .font(themeManager.headingFont(size: 16))
-                .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
-            
-            Text(value.isEmpty ? "Not set" : value)
-                .font(themeManager.bodyFont(size: 18))
-                .foregroundColor(themeManager.textColor(for: colorScheme))
-                .lineLimit(1)
-                .truncationMode(.tail)
+        Group {
+            if title == "Training" {
+                // Special handling for Training goal
+                Button(action: {
+                    showTrainingPDFUploader = true
+                }) {
+                    VStack(alignment: .leading) {
+                        Text(title)
+                            .font(themeManager.headingFont(size: 16))
+                            .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                        
+                        HStack {
+                            Text(value.isEmpty ? "Not set" : value)
+                                .font(themeManager.bodyFont(size: 18))
+                                .foregroundColor(themeManager.textColor(for: colorScheme))
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            
+                            if hasPDF {
+                                Image(systemName: "doc.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(themeManager.accentColor(for: colorScheme))
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(themeManager.cardBackgroundColor(for: colorScheme))
+                    .cornerRadius(12)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(hex: "C6C6C6"), lineWidth: 2)
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+                .onAppear {
+                    // Check if there's a PDF already
+                    TrainingPDFManager.shared.checkTrainingExists(clientId: client.userId) { exists in
+                        DispatchQueue.main.async {
+                            self.hasPDF = exists
+                        }
+                    }
+                }
+            } else {
+                // Regular card for other goals
+                VStack(alignment: .leading) {
+                    Text(title)
+                        .font(themeManager.headingFont(size: 16))
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                    
+                    Text(value.isEmpty ? "Not set" : value)
+                        .font(themeManager.bodyFont(size: 18))
+                        .foregroundColor(themeManager.textColor(for: colorScheme))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(themeManager.cardBackgroundColor(for: colorScheme))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color(hex: "C6C6C6"), lineWidth: 2)
+                )
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(themeManager.cardBackgroundColor(for: colorScheme))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(hex: "C6C6C6"), lineWidth: 2)
-        )
     }
 }
 
