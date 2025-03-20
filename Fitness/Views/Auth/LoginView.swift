@@ -3,6 +3,7 @@ import SwiftUI
 struct LoginView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var showError: Bool = false
@@ -10,9 +11,13 @@ struct LoginView: View {
     @State private var resetMessage: String = ""
     @State private var isResettingPassword: Bool = false
     
+    // Animation states
+    @State private var animateButton = false
+    @State private var formAppeared = false
+    
     var body: some View {
         ZStack {
-            Color("Accent")
+            themeManager.accentColor(for: colorScheme)
                 .ignoresSafeArea()
             
             VStack(alignment: .leading, spacing: 16) {
@@ -21,10 +26,14 @@ struct LoginView: View {
                     Text("Welcome back!")
                         .font(themeManager.bodyFont(size: 20))
                         .foregroundStyle(.white)
+                        .opacity(formAppeared ? 1 : 0)
+                        .offset(y: formAppeared ? 0 : 20)
                     
                     Text("Login")
                         .font(themeManager.headingFont(size: 30))
                         .foregroundStyle(.white)
+                        .opacity(formAppeared ? 1 : 0)
+                        .offset(y: formAppeared ? 0 : 20)
                 }
                 .padding(.bottom, 16)
                 
@@ -39,6 +48,8 @@ struct LoginView: View {
                     lineWidth: 1,
                     iconName: "envelope"
                 )
+                .opacity(formAppeared ? 1 : 0)
+                .offset(y: formAppeared ? 0 : 15)
                 
                 StrokedSecureField(
                     text: $password,
@@ -50,6 +61,8 @@ struct LoginView: View {
                     cornerRadius: 8,
                     lineWidth: 1
                 )
+                .opacity(formAppeared ? 1 : 0)
+                .offset(y: formAppeared ? 0 : 15)
                 
                 // Forgot Password Button
                 HStack {
@@ -63,34 +76,47 @@ struct LoginView: View {
                     .disabled(isResettingPassword)
                 }
                 .padding(.top, -8)
+                .opacity(formAppeared ? 1 : 0)
                 
                 if showError {
                     Text(authManager.errorMessage ?? "Invalid credentials")
                         .font(themeManager.bodyFont(size: 14))
                         .foregroundColor(.red)
                         .padding(.horizontal)
+                        .padding(.vertical, 8)
+                        .background(Color.white.opacity(0.15))
+                        .cornerRadius(8)
                 }
                 
-                Button(action: loginUser) {
-                    if authManager.isLoading || isResettingPassword {
-                        ProgressView()
-                            .tint(Color("Accent"))
-                            .frame(maxWidth: .infinity)
+                Button(action: {
+                    let impactMed = UIImpactFeedbackGenerator(style: .medium)
+                    impactMed.impactOccurred()
+                    loginUser()
+                }) {
+                    ZStack {
+                        // Button background
+                        RoundedRectangle(cornerRadius: 25)
+                            .fill(Color.white)
                             .frame(height: 50)
-                            .background(Color.white)
-                            .cornerRadius(25)
-                    } else {
-                        Text("Log in")
-                            .font(themeManager.bodyFont(size: 16))
-                            .foregroundColor(Color("Accent"))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                            .background(Color.white)
-                            .cornerRadius(25)
+                            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                            .scaleEffect(animateButton ? 1.02 : 1)
+                        
+                        if authManager.isLoading || isResettingPassword {
+                            ProgressView()
+                                .tint(themeManager.accentColor(for: colorScheme))
+                                .scaleEffect(1.2)
+                        } else {
+                            Text("Log in")
+                                .font(themeManager.bodyFont(size: 16))
+                                .fontWeight(.semibold)
+                                .foregroundColor(themeManager.accentColor(for: colorScheme))
+                        }
                     }
                 }
                 .padding(.top, 8)
                 .disabled(authManager.isLoading || isResettingPassword)
+                .opacity(formAppeared ? 1 : 0)
+                .offset(y: formAppeared ? 0 : 20)
             }
             .padding()
             .alert("Password Reset", isPresented: $showResetAlert) {
@@ -98,6 +124,17 @@ struct LoginView: View {
             } message: {
                 Text(resetMessage)
                     .font(themeManager.bodyFont())
+            }
+        }
+        .onAppear {
+            // Animate form elements
+            withAnimation(.easeOut(duration: 0.6)) {
+                formAppeared = true
+            }
+            
+            // Subtle pulsing animation for the button
+            withAnimation(Animation.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                animateButton = true
             }
         }
     }
@@ -129,12 +166,20 @@ struct LoginView: View {
                     resetMessage = "If this email exists in our system, a password reset link has been sent. Please check your inbox."
                     showResetAlert = true
                     isResettingPassword = false
+                    
+                    // Provide success haptic feedback
+                    let notificationFeedback = UINotificationFeedbackGenerator()
+                    notificationFeedback.notificationOccurred(.success)
                 }
             } catch {
                 await MainActor.run {
                     resetMessage = "Error sending password reset: \(error.localizedDescription)"
                     showResetAlert = true
                     isResettingPassword = false
+                    
+                    // Provide error haptic feedback
+                    let notificationFeedback = UINotificationFeedbackGenerator()
+                    notificationFeedback.notificationOccurred(.error)
                 }
             }
         }
@@ -143,8 +188,16 @@ struct LoginView: View {
 
 struct LoginView_Previews: PreviewProvider {
     static var previews: some View {
-        LoginView()
-            .environmentObject(AuthManager.shared)
-            .environmentObject(ThemeManager())
+        Group {
+            LoginView()
+                .environmentObject(AuthManager.shared)
+                .environmentObject(ThemeManager())
+                .preferredColorScheme(.light)
+            
+            LoginView()
+                .environmentObject(AuthManager.shared)
+                .environmentObject(ThemeManager())
+                .preferredColorScheme(.dark)
+        }
     }
 }

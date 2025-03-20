@@ -5,7 +5,7 @@ import FirebaseFirestoreCombineSwift
 import Combine
 
 // Model to store which elements are visible for a specific client
-struct ClientVisibilitySettings: Codable, Identifiable {
+struct ClientVisibilitySettings: Codable, Identifiable, Equatable {
     @DocumentID var id: String?
     let clientId: String
     var showWeeklyGoals: Bool = true
@@ -28,6 +28,17 @@ struct ClientVisibilitySettings: Codable, Identifiable {
             showWeeklyCheckins: true
         )
     }
+    
+    // Implement Equatable
+    static func == (lhs: ClientVisibilitySettings, rhs: ClientVisibilitySettings) -> Bool {
+        return lhs.clientId == rhs.clientId &&
+               lhs.showWeeklyGoals == rhs.showWeeklyGoals &&
+               lhs.showProgressGraph == rhs.showProgressGraph &&
+               lhs.showMealPlans == rhs.showMealPlans &&
+               lhs.showTrainingPDF == rhs.showTrainingPDF &&
+               lhs.showDailyCheckins == rhs.showDailyCheckins &&
+               lhs.showWeeklyCheckins == rhs.showWeeklyCheckins
+    }
 }
 
 // View model to handle fetching and updating client visibility settings
@@ -39,20 +50,32 @@ class ClientSettingsViewModel: ObservableObject {
     @Published var showSuccessMessage = false
     
     private var clientId: String
+    private var settingsListener: ListenerRegistration?
     
     init(clientId: String) {
         self.clientId = clientId
         self.settings = ClientVisibilitySettings.defaultSettings(for: clientId)
-        fetchSettings()
+        setupSettingsListener()
     }
     
-    func fetchSettings() {
+    deinit {
+        // Clean up listener when view model is deallocated
+        settingsListener?.remove()
+    }
+    
+    // Setup a real-time listener for settings changes
+    func setupSettingsListener() {
+        print("Setting up settings listener for client: \(clientId)")
         isLoading = true
         errorMessage = nil
         
-        db.collection("client_settings")
+        // Remove any existing listener
+        settingsListener?.remove()
+        
+        // Set up a real-time listener for the client's settings
+        settingsListener = db.collection("client_settings")
             .document(clientId)
-            .getDocument { [weak self] snapshot, error in
+            .addSnapshotListener { [weak self] snapshot, error in
                 guard let self = self else { return }
                 
                 self.isLoading = false
@@ -78,8 +101,11 @@ class ClientSettingsViewModel: ObservableObject {
                 if let snapshot = snapshot, snapshot.exists {
                     do {
                         let settings = try snapshot.data(as: ClientVisibilitySettings.self)
+                        print("🔄 Received updated settings for client \(self.clientId): \(settings)")
                         DispatchQueue.main.async {
-                            self.settings = settings
+                            withAnimation {
+                                self.settings = settings
+                            }
                         }
                     } catch {
                         print("⚠️ Settings parse error: \(error.localizedDescription)")
@@ -97,6 +123,11 @@ class ClientSettingsViewModel: ObservableObject {
                     }
                 }
             }
+    }
+    
+    // For backwards compatibility
+    func fetchSettings() {
+        setupSettingsListener()
     }
     
     func updateSettings() async {

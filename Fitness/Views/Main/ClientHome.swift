@@ -29,6 +29,9 @@ struct ClientHome: View {
     @State private var engine: CHHapticEngine?
     @State private var currentVisibleDay: String = ""
     
+    // Debug state to track settings changes
+    @State private var lastSettingsUpdate = Date()
+    
     // Initialize the weight view model with the current user's ID
     init(client: AuthManager.DBUser) {
         self.client = client
@@ -41,6 +44,9 @@ struct ClientHome: View {
             ZStack {
                 themeManager.backgroundColor(for: colorScheme)
                     .ignoresSafeArea()
+                
+        
+                
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         // Header Section
@@ -89,9 +95,12 @@ struct ClientHome: View {
                             Text("Your Progress")
                                 .font(themeManager.headingFont(size: 18))
                                 .foregroundStyle(themeManager.textColor(for: colorScheme))
+                                .id("progress-header-\(lastSettingsUpdate.timeIntervalSince1970)")
                             
                             WeightGraphView(weightEntries: weightViewModel.weightEntries)
                                 .environmentObject(themeManager)
+                                .id("progress-graph-\(lastSettingsUpdate.timeIntervalSince1970)")
+                                .transition(.opacity)
                         }
                         
                         // Daily Goals section - only show if enabled in settings
@@ -113,6 +122,7 @@ struct ClientHome: View {
                                 
                                 Spacer()
                             }
+                            .id("goals-header-\(lastSettingsUpdate.timeIntervalSince1970)")
                             
                             DailyGoalsGridView(userId: client.userId)
                                 .environmentObject(themeManager)
@@ -121,6 +131,8 @@ struct ClientHome: View {
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(themeManager.backgroundColor(for: colorScheme))
                                 )
+                                .id("goals-grid-\(lastSettingsUpdate.timeIntervalSince1970)")
+                                .transition(.opacity)
                         }
                         
                         // Meal Plans section - only show if enabled in settings
@@ -128,6 +140,7 @@ struct ClientHome: View {
                             Text("Your Plan")
                                 .font(themeManager.headingFont(size: 18))
                                 .foregroundStyle(themeManager.textColor(for: colorScheme))
+                                .id("meal-header-\(lastSettingsUpdate.timeIntervalSince1970)")
                             
                             // Then update your ScrollView with this implementation
                             ScrollViewReader { scrollProxy in
@@ -172,12 +185,16 @@ struct ClientHome: View {
                                     }
                                 }
                             }
+                            .id("meal-plans-\(lastSettingsUpdate.timeIntervalSince1970)")
+                            .transition(.opacity)
                         }
                         
                         // Training PDF section - only show if enabled in settings
                         if settingsViewModel.settings.showTrainingPDF {
                             PDFViewerBox(clientId: client.userId)
                                 .environmentObject(themeManager)
+                                .id("pdf-box-\(lastSettingsUpdate.timeIntervalSince1970)")
+                                .transition(.opacity)
                         }
                         
                         // Daily Check-ins Section - only show if enabled in settings
@@ -205,6 +222,7 @@ struct ClientHome: View {
                                 .disabled(!canAddDailyCheckin)
                                    .opacity(canAddDailyCheckin ? 1.0 : 0.3)
                             }
+                            .id("daily-header-\(lastSettingsUpdate.timeIntervalSince1970)")
 
                             // UPDATED: LazyVStack for better performance
                             LazyVStack(spacing: 16) {
@@ -214,7 +232,7 @@ struct ClientHome: View {
                                         .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                                         .padding()
                                         .frame(maxWidth: .infinity, alignment: .center)
-                                        .id("empty-checkins") // Add a stable ID to force refresh
+                                        .id("empty-checkins-\(lastSettingsUpdate.timeIntervalSince1970)") // Add a stable ID to force refresh
                                 } else {
                                     ForEach(authManager.dailyCheckins) { checkin in
                                         NavigationLink {
@@ -245,6 +263,8 @@ struct ClientHome: View {
                                 // Check if user can add a daily checkin
                                 checkDailyCheckinStatus()
                             }
+                            .id("daily-checkins-\(lastSettingsUpdate.timeIntervalSince1970)")
+                            .transition(.opacity)
                         }
                         
                         // Weekly Check-ins Section - only show if enabled in settings
@@ -267,6 +287,7 @@ struct ClientHome: View {
                                 }
                                 .sensoryFeedback(.impact(flexibility: .solid, intensity: 1), trigger: showingAddUpdate)
                             }
+                            .id("weekly-header-\(lastSettingsUpdate.timeIntervalSince1970)")
                             
                             ScrollView {
                                 if authManager.latestUpdates.isEmpty {
@@ -274,6 +295,7 @@ struct ClientHome: View {
                                         .font(themeManager.bodyFont(size: 16))
                                         .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                                         .padding()
+                                        .id("empty-updates-\(lastSettingsUpdate.timeIntervalSince1970)")
                                 } else {
                                     ForEach(authManager.latestUpdates) { update in
                                         NavigationLink {
@@ -299,6 +321,7 @@ struct ClientHome: View {
                                 }
                             }
                             .scrollIndicators(.hidden)
+                            .id("weekly-updates-\(lastSettingsUpdate.timeIntervalSince1970)")
                             
                             NavigationLink(destination: allUpdatesView()
                                             .environmentObject(authManager)
@@ -316,9 +339,12 @@ struct ClientHome: View {
                                     .matchedTransitionSource(id: "allUpdates", in: updatezoom)
                             }
                             .padding(.horizontal)
+                            .id("view-all-\(lastSettingsUpdate.timeIntervalSince1970)")
+                            .transition(.opacity)
                         }
                     }
                     .padding()
+                    .animation(.spring(), value: settingsViewModel.settings)
                 }
             }
             // IMPROVED: Daily check-in sheet with better dismiss handling
@@ -346,8 +372,6 @@ struct ClientHome: View {
                 checkinsCount = authManager.dailyCheckins.count
                 // Check if user can add a check-in today
                 checkDailyCheckinStatus()
-                // Fetch client visibility settings
-                settingsViewModel.fetchSettings()
             }
             // Use a timer to periodically check status (handles deletion case)
             .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
@@ -355,6 +379,14 @@ struct ClientHome: View {
                 if checkinsCount != authManager.dailyCheckins.count {
                     checkinsCount = authManager.dailyCheckins.count
                     checkDailyCheckinStatus()
+                }
+            }
+            // Listen for settings changes
+            .onChange(of: settingsViewModel.settings) { newSettings in
+                print("📱 Settings changed in ClientHome - updating UI")
+                // Update lastSettingsUpdate to force view refresh
+                withAnimation {
+                    lastSettingsUpdate = Date()
                 }
             }
         }
@@ -380,6 +412,14 @@ struct ClientHome: View {
         }
     }
 }
+
+// Date formatter for the debug timestamp
+private let itemFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .short
+    formatter.timeStyle = .medium
+    return formatter
+}()
 
 // Helper functions
 private func getScaleAmount(geometry: GeometryProxy) -> CGFloat {

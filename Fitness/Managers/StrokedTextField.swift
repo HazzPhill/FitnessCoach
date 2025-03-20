@@ -21,7 +21,7 @@ struct ModernTextField: View {
     @Binding var text: String
     var keyboardType: UIKeyboardType = .default
     @EnvironmentObject var themeManager: ThemeManager
-    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.colorScheme) var colorScheme: SwiftUI.ColorScheme
     
     var body: some View {
         ZStack(alignment: .leading) {
@@ -220,6 +220,7 @@ struct LoadingButton: View {
 struct ModernRoleSelector: View {
     @Binding var selectedRole: UserRole
     @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme: SwiftUI.ColorScheme
     
     // Animation state
     @Namespace private var animation
@@ -246,8 +247,10 @@ struct ModernRoleSelector: View {
                             role: role,
                             isSelected: selectedRole == role,
                             namespace: animation,
-                            animateSelection: animateSelection
+                            animateSelection: animateSelection,
+                            swiftUIColorScheme: colorScheme
                         )
+                        .environmentObject(themeManager)
                         .onTapGesture {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                 selectedRole = role
@@ -286,6 +289,7 @@ struct RoleOption: View {
     let isSelected: Bool
     var namespace: Namespace.ID
     var animateSelection: Bool
+    var swiftUIColorScheme: SwiftUI.ColorScheme
     @EnvironmentObject var themeManager: ThemeManager
     
     var body: some View {
@@ -293,9 +297,9 @@ struct RoleOption: View {
             // Selected background
             if isSelected {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color("Accent"))
+                    .fill(Color.white)
                     .matchedGeometryEffect(id: "SelectedBackground", in: namespace)
-                    .shadow(color: Color("Accent").opacity(0.4), radius: 5, x: 0, y: 0)
+                    .shadow(color: Color.black.opacity(0.15), radius: 5, x: 0, y: 0)
             }
             
             // Content
@@ -303,7 +307,7 @@ struct RoleOption: View {
                 // Role icon
                 Image(systemName: roleIcon)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(isSelected ? .white : .white.opacity(0.7))
+                    .foregroundColor(iconColor)
                     .opacity(animateSelection || !isSelected ? 1 : 0)
                     .scaleEffect(animateSelection || !isSelected ? 1 : 0.7)
                 
@@ -311,7 +315,7 @@ struct RoleOption: View {
                 Text(role.rawValue.capitalized)
                     .font(themeManager.bodyFont())
                     .fontWeight(isSelected ? .semibold : .regular)
-                    .foregroundColor(isSelected ? .white : .white.opacity(0.7))
+                    .foregroundColor(textColor)
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 15)
@@ -328,6 +332,28 @@ struct RoleOption: View {
             return "figure.run"
         case .coach:
             return "figure.strengthtraining.traditional"
+        }
+    }
+    
+    // Get appropriate text color based on selection state and color scheme
+    private var textColor: Color {
+        if isSelected {
+            // When selected, use dark color for better contrast against white background
+            return themeManager.accentColor(for: swiftUIColorScheme)
+        } else {
+            // When not selected, always use white for contrast against the accent background
+            return .white.opacity(0.7)
+        }
+    }
+    
+    // Get appropriate icon color based on selection state and color scheme
+    private var iconColor: Color {
+        if isSelected {
+            // When selected, use accent color for better contrast against white background
+            return themeManager.accentColor(for: swiftUIColorScheme)
+        } else {
+            // When not selected, always use white for contrast against the accent background
+            return .white.opacity(0.7)
         }
     }
 }
