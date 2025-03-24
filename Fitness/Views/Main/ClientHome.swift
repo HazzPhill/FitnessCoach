@@ -405,6 +405,7 @@ struct ClientHome: View {
                 // Initialize haptic engine
                 hapticFeedback.prepare()
                 
+
                 // Setup notification observer for weekly check-in status changes
                 checkinStatusObserver = NotificationCenter.default.addObserver(
                     forName: .weeklyCheckInStatusChanged,
@@ -413,6 +414,19 @@ struct ClientHome: View {
                 ) { _ in
                     // For structs, we don't use [weak self] - just access self directly
                     self.updateWeeklyReminderStatus()
+                    
+                    // Force refresh the updates data
+                    withAnimation {
+                        // Explicitly refresh both types of updates
+                        authManager.refreshWeeklyUpdates()
+                        
+                        // IMPORTANT: Also refresh the weight entries data for the graph
+                        weightViewModel.fetchAllWeightEntries(userId: client.userId)
+                        
+                        // Add some visual feedback that the data refreshed
+                        let generator = UIImpactFeedbackGenerator(style: .light)
+                        generator.impactOccurred()
+                    }
                 }
             }
             .onDisappear {

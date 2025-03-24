@@ -11,12 +11,17 @@ class WeightEntriesViewModel: ObservableObject {
     init(userId: String) {
         fetchAllWeightEntries(userId: userId)
     }
-    
+
     func fetchAllWeightEntries(userId: String) {
         // Remove any existing listener
         listener?.remove()
         
         print("Fetching all weight entries for user: \(userId)")
+        
+        // Clear existing entries first to ensure UI updates properly
+        DispatchQueue.main.async {
+            self.weightEntries = []
+        }
         
         // Set up listener for all weight entries with no limit
         listener = db.collection("updates")
@@ -26,16 +31,16 @@ class WeightEntriesViewModel: ObservableObject {
                 guard let self = self else { return }
                 
                 if let error = error {
-                    print("Error fetching weight entries: \(error.localizedDescription)")
+                    print("❌ Error fetching weight entries: \(error.localizedDescription)")
                     return
                 }
                 
                 guard let documents = snapshot?.documents else {
-                    print("No documents found")
+                    print("⚠️ No documents found for weight entries")
                     return
                 }
                 
-                print("Found \(documents.count) weight entry documents")
+                print("📊 Found \(documents.count) weight entry documents")
                 
                 let entries = documents.compactMap { doc -> WeightEntry? in
                     // Get the data without conditional binding since it's not optional
@@ -44,7 +49,7 @@ class WeightEntriesViewModel: ObservableObject {
                     // Check for required fields
                     guard let weight = data["weight"] as? Double,
                           let timestamp = data["date"] as? Timestamp else {
-                        print("Skipping document \(doc.documentID) - missing required fields")
+                        print("⚠️ Skipping document \(doc.documentID) - missing weight or date")
                         return nil
                     }
                     
@@ -56,10 +61,18 @@ class WeightEntriesViewModel: ObservableObject {
                 let sortedEntries = entries.sorted { $0.date < $1.date }
                 
                 DispatchQueue.main.async {
-                    print("Updating chart with \(sortedEntries.count) weight entries")
+                    print("📈 Updating chart with \(sortedEntries.count) weight entries")
                     self.weightEntries = sortedEntries
                 }
             }
+    }
+
+    // Add a new method to the ViewModel to refresh the data immediately when needed
+    func forceRefresh(userId: String) {
+        print("🔄 Force refreshing weight entries")
+        // Remove and re-create the listener
+        listener?.remove()
+        fetchAllWeightEntries(userId: userId)
     }
     
     deinit {

@@ -771,9 +771,24 @@ class AuthManager: ObservableObject {
     
     func refreshWeeklyUpdates() {
         print("🔄 Manually refreshing weekly updates")
-        // Re-setup the updates listener to force a refresh
-        setupUpdatesListener()
-        setupYearlyUpdatesListener()
+        
+        // Remove any existing listeners first to ensure clean state
+        updatesListener?.remove()
+        yearlyUpdatesListener?.remove()
+        
+        // Force empty the arrays first to trigger UI updates
+        DispatchQueue.main.async {
+            self.latestUpdates = []
+            self.yearlyUpdates = []
+            
+            // Small delay before re-setting up listeners
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                // Re-setup the listeners
+                self.setupUpdatesListener()
+                self.setupYearlyUpdatesListener()
+                print("✅ Update listeners refreshed completely")
+            }
+        }
     }
 
     func deleteUpdate(updateId: String) async throws {
@@ -889,6 +904,8 @@ class AuthManager: ObservableObject {
         }
     }
 }
+
+
 
 extension AuthManager {
     func sendPasswordReset(email: String) async throws {

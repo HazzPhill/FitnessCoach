@@ -239,14 +239,25 @@ struct UpdateDetailView: View {
             do {
                 try await authManager.deleteUpdate(updateId: updateId)
                 
-                // Force refresh the updates
-                authManager.refreshWeeklyUpdates()
-                
-                // Post a notification that an update was deleted
-                NotificationCenter.default.post(name: .weeklyCheckInStatusChanged, object: nil)
+                // Force a more thorough refresh of the updates
+                await MainActor.run {
+                    // First refresh immediately before notification
+                    authManager.refreshWeeklyUpdates()
+                    print("✅ First refresh completed after deletion")
+                    
+                    // Post notification that update was deleted
+                    NotificationCenter.default.post(name: .weeklyCheckInStatusChanged, object: nil)
+                    print("📢 Posted weeklyCheckInStatusChanged notification")
+                    
+                    // Schedule another refresh after a small delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        authManager.refreshWeeklyUpdates()
+                        print("✅ Second refresh completed after delay")
+                    }
+                }
                 
                 // Add a small delay to ensure Firebase operations complete
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                try? await Task.sleep(nanoseconds: 600_000_000) // 0.6 seconds
                 
                 // Return to previous screen
                 await MainActor.run {
