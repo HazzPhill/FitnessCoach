@@ -189,8 +189,8 @@ struct ClientHome: View {
                             .transition(.opacity)
                         }
                         
-                        // Training PDF section - only show if enabled in settings
-                        if settingsViewModel.settings.showTrainingPDF {
+                        // To this:
+                        if settingsViewModel.settings.showMealPlans {
                             PDFViewerBox(clientId: client.userId)
                                 .environmentObject(themeManager)
                                 .id("pdf-box-\(lastSettingsUpdate.timeIntervalSince1970)")

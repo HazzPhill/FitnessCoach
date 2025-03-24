@@ -174,7 +174,7 @@ struct ClientView: View {
                         }
 
                         // Training PDF section - only show if enabled in settings
-                        if settingsViewModel.settings.showTrainingPDF {
+                        if settingsViewModel.settings.showMealPlans {
                             PDFUploadBox(clientId: client.userId)
                                 .environmentObject(themeManager)
                         }
