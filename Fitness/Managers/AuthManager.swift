@@ -6,16 +6,19 @@ import FirebaseStorage
 import FirebaseCore
 import SwiftUI
 
+// MARK: - AuthManager Class
 @MainActor
 class AuthManager: ObservableObject {
     static let shared = AuthManager()
     
+    // MARK: - Firebase Properties
     private let auth = Auth.auth()
     private let db = Firestore.firestore()
     private let storage = Storage.storage()
     
     private var cancellables = Set<AnyCancellable>()
     
+    // MARK: - Published Properties
     @Published var currentUser: DBUser?
     @Published var currentGroup: Group?
     @Published var latestUpdates: [Update] = [] // Realtime updates listener
@@ -32,7 +35,7 @@ class AuthManager: ObservableObject {
     private var groupListener: ListenerRegistration?
     private var updatesListener: ListenerRegistration?
     
-    // MARK: - Models
+    // MARK: - Data Models
     
     struct Group: Codable, Identifiable {
         @DocumentID var id: String?
@@ -72,7 +75,7 @@ class AuthManager: ObservableObject {
         @ServerTimestamp var date: Date?
     }
     
-    // MARK: - Initialisation
+    // MARK: - Initialization
     
     init() {
         auth.addStateDidChangeListener { [weak self] _, user in
@@ -174,6 +177,8 @@ class AuthManager: ObservableObject {
     }
     
 
+    // MARK: - Notification Scheduling
+    
     // Schedule a notification for 9am Monday
     func scheduleMondayCleanupNotification() {
         let content = UNMutableNotificationContent()
@@ -219,6 +224,8 @@ class AuthManager: ObservableObject {
         }
     }
 
+    // MARK: - Cleanup Functions
+    
     func cleanupOldCheckins() async {
         guard let userId = currentUser?.userId else { return }
         
@@ -286,6 +293,8 @@ class AuthManager: ObservableObject {
         }
     }
     
+    // MARK: - Daily Check-ins Management
+    
     func setupDailyCheckinsListener(uid: String) {
         // Clean up existing listener
         dailyCheckinsListener?.remove()
@@ -347,6 +356,8 @@ class AuthManager: ObservableObject {
         setupDailyCheckinsListener(uid: userId)
     }
 
+    // MARK: - Group Management
+    
     func joinGroup(code: String) async throws {
         guard let user = auth.currentUser else {
             print("❌ Join Group Error: No authenticated user")
@@ -464,6 +475,8 @@ class AuthManager: ObservableObject {
         try document.setData(from: user)
     }
     
+    // MARK: - Listeners Setup
+    
     func setupListeners(uid: String) {
         userListener = db.collection("users").document(uid)
             .addSnapshotListener { [weak self] snapshot, error in
@@ -520,6 +533,8 @@ class AuthManager: ObservableObject {
                 }
         }
     }
+    
+    // MARK: - Update Management
     
     func addUpdate(name: String, weight: Double, image: UIImage?, biggestWin: String, issues: String, extraCoachRequest: String, finalScore: Double) async throws {
         guard let currentUser = currentUser else {
@@ -723,6 +738,8 @@ class AuthManager: ObservableObject {
     }
     
     
+    // MARK: - Cleanup Operations
+    
     // Add this function to AuthManager.swift to force a manual cleanup
     func forceCleanupAllDailyCheckins() async {
         guard let userId = currentUser?.userId else {
@@ -769,6 +786,8 @@ class AuthManager: ObservableObject {
         }
     }
     
+    // MARK: - Update Refreshing
+    
     func refreshWeeklyUpdates() {
         print("🔄 Manually refreshing weekly updates")
         
@@ -791,6 +810,8 @@ class AuthManager: ObservableObject {
         }
     }
 
+    // MARK: - Update Deletion
+    
     func deleteUpdate(updateId: String) async throws {
         guard let currentUser = currentUser else {
             throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
@@ -831,6 +852,8 @@ class AuthManager: ObservableObject {
         
         print("🔄 Update listeners refreshed")
     }
+    
+    // MARK: - Notification Scheduling Methods
     
     func scheduleWeeklyNotification() {
         let content = UNMutableNotificationContent()
@@ -873,8 +896,6 @@ class AuthManager: ObservableObject {
         }
     }
     
-    
-    
     // MARK: - Helper Methods
     
     private func generateGroupCode() -> String {
@@ -905,6 +926,7 @@ class AuthManager: ObservableObject {
     }
 }
 
+// MARK: - Weekly Check-in Status Extension
 extension AuthManager {
     // Enum to represent the weekly check-in status
     enum WeeklyCheckinStatus {
@@ -914,27 +936,60 @@ extension AuthManager {
         case waitingForNext  // Not eligible yet, waiting for next check-in window
     }
     
+    // MARK: - UPDATED: Weekly Check-in Status Methods
+    
+    // MARK: - UPDATED: Allows weekly check-ins on any weekend day of each week
+    // This ensures if someone checked in on Sunday, they can check in the following Saturday
+    
     // Check the status of weekly check-ins
     func getWeeklyCheckinStatus() -> WeeklyCheckinStatus {
         // Get current date
         let now = Date()
         let calendar = Calendar.current
         
+        print("📅 TIMEZONE DEBUG: Calendar timezone: \(calendar.timeZone)")
+        print("📅 TIMEZONE DEBUG: Current date/time: \(now)")
+        
         // Get the current weekday (1 = Sunday, 2 = Monday, ..., 7 = Saturday)
         let weekday = calendar.component(.weekday, from: now)
         
-        // Check if it's the weekend (Saturday or Sunday)
-        let isWeekend = (weekday == 1 || weekday == 7)
+        // ENHANCED DEBUG: Detailed weekday logging
+        print("📅 WEEKDAY DEBUG: Raw weekday value: \(weekday)")
+        print("📅 WEEKDAY DEBUG: Is this a Saturday? \(weekday == 7)")
+        print("📅 WEEKDAY DEBUG: Is this a Sunday? \(weekday == 1)")
         
-        // Calculate the start of the current week (Sunday)
+        // FIXED: Explicitly set weekend days and always force weekends to be eligible
+        let isSaturday = (weekday == 7)
+        let isSunday = (weekday == 1)
+        let isWeekend = (isSaturday || isSunday)
+        
+        print("📅 WEEKEND DEBUG: isSaturday: \(isSaturday), isSunday: \(isSunday)")
+        print("📅 WEEKEND DEBUG: isWeekend calculated as: \(isWeekend)")
+        
+        // Calculate the start of the CURRENT week (Sunday)
         let today = calendar.startOfDay(for: now)
-        var weekdayComponents = calendar.dateComponents([.weekday], from: today)
-        let daysToSubtract = weekdayComponents.weekday! - 1 // 1 is Sunday in Gregorian calendar
         
-        guard let startOfWeek = calendar.date(byAdding: .day, value: -daysToSubtract, to: today) else {
-            // Fallback - if we can't calculate, just let them check in
-            return .eligible
+        // Get start of this week based on current weekday
+        let startOfWeek: Date
+        if isSunday {
+            // Today is Sunday - start of the week is today
+            startOfWeek = today
+            print("📅 WEEK DEBUG: Today is Sunday, so start of week is today")
+        } else {
+            // For any other day (including Saturday), calculate the previous Sunday
+            let daysToSubtract = weekday == 7 ? 6 : (weekday - 1)
+            if let date = calendar.date(byAdding: .day, value: -daysToSubtract, to: today) {
+                startOfWeek = date
+                print("📅 WEEK DEBUG: Calculated start of week (Sunday): \(startOfWeek)")
+            } else {
+                // Fallback
+                startOfWeek = today
+                print("📅 WEEK DEBUG: Error calculating start of week, using today")
+            }
         }
+        
+        print("📅 WEEK DEBUG: today is: \(today)")
+        print("📅 WEEK DEBUG: final startOfWeek: \(startOfWeek)")
         
         print("📅 Checking weekly check-in status:")
         print("   - Today: \(today)")
@@ -942,21 +997,38 @@ extension AuthManager {
         print("   - Start of week: \(startOfWeek)")
         print("   - Is weekend: \(isWeekend)")
         
-        // Get the most recent check-in for the current week
-        let weeklyCheckIn = latestUpdates.first { update in
-            guard let updateDate = update.date else { return false }
-            return updateDate >= startOfWeek
+        // Debug logging for current user
+        print("📅 Current User ID: \(self.currentUser?.userId ?? "nil")")
+        print("📅 Latest Updates Count: \(latestUpdates.count)")
+        
+        // Check for existing check-ins only if we have a current user
+        if let currentUserId = self.currentUser?.userId {
+            // NEW IMPLEMENTATION: Get the most recent check-in for the CURRENT week
+            // This allows checks on Saturday to be done regardless of having done a check the previous Sunday
+            let weeklyCheckIn = latestUpdates.first { update in
+                guard let updateDate = update.date else { return false }
+                let updateDay = calendar.startOfDay(for: updateDate)
+                let isThisWeek = updateDay >= startOfWeek && updateDay <= today
+                let isCurrentUser = update.userId == currentUserId
+                
+                print("📅 DEBUG: Checking update: date=\(updateDate), isThisWeek=\(isThisWeek), isCurrentUser=\(isCurrentUser)")
+                
+                return isThisWeek && isCurrentUser
+            }
+            
+            // If there's a check-in THIS week already, they're done
+            if weeklyCheckIn != nil {
+                print("✅ User has completed a check-in THIS week")
+                print("✅ Check-in detail: \(String(describing: weeklyCheckIn))")
+                return .completed
+            }
+        } else {
+            print("⚠️ No current user ID available for check-in verification")
         }
         
-        // If there's a check-in this week already, they're done
-        if weeklyCheckIn != nil {
-            print("✅ User has completed a check-in this week")
-            return .completed
-        }
-        
-        // If it's the weekend and no check-in, they can submit
+        // FIXED: If it's the weekend, ALWAYS allow check-in if no check-in this week
         if isWeekend {
-            print("📅 It's the weekend - user can submit check-in")
+            print("📅 It's the weekend - user can submit check-in FOR THIS WEEK")
             return .eligible
         }
         
@@ -976,10 +1048,13 @@ extension AuthManager {
             }
             let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endOfPreviousWeekend) ?? endOfPreviousWeekend
             
-            // Find check-ins from previous week's weekend
+            // FIXED: Find check-ins from previous week's weekend with proper user ID check
             let previousWeekendCheckin = latestUpdates.first { update in
-                guard let updateDate = update.date else { return false }
-                return updateDate >= startOfPreviousWeek && updateDate <= endOfDay
+                guard let updateDate = update.date,
+                      let currentUserId = self.currentUser?.userId else { return false }
+                return updateDate >= startOfPreviousWeek &&
+                       updateDate <= endOfDay &&
+                       update.userId == currentUserId
             }
             
             if previousWeekendCheckin == nil {
@@ -1015,11 +1090,72 @@ extension AuthManager {
     
     // Public method to check if user can actually submit a check-in
     func canSubmitWeeklyCheckin() -> Bool {
-        return getWeeklyCheckinStatus() == .eligible
+        // Get the current date and calendar
+        let now = Date()
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: now)
+        
+        print("🔍 BUTTON DEBUG: Checking if user can submit weekly check-in")
+        print("🔍 BUTTON DEBUG: Current weekday: \(weekday) (1=Sunday, 7=Saturday)")
+        
+        // PRIORITY FIX: First check if it's the weekend
+        if weekday == 1 || weekday == 7 {
+            print("🔍 BUTTON DEBUG: It's the weekend, checking if submitted THIS week")
+            
+            // Calculate the start of the current week (Sunday)
+            let today = calendar.startOfDay(for: now)
+            let startOfWeek: Date
+            
+            // If today is Sunday, it's the start of the week
+            if weekday == 1 {
+                startOfWeek = today
+                print("🔍 BUTTON DEBUG: Today is Sunday - start of week is today")
+            } else {
+                // If today is Saturday, we need to find the previous Sunday
+                let daysToSubtract = 6 // 6 days back from Saturday to get to Sunday
+                if let date = calendar.date(byAdding: .day, value: -daysToSubtract, to: today) {
+                    startOfWeek = date
+                    print("🔍 BUTTON DEBUG: Today is Saturday - start of week is \(startOfWeek)")
+                } else {
+                    // Fallback
+                    startOfWeek = today
+                    print("🔍 BUTTON DEBUG: Error calculating start of week, using today")
+                }
+            }
+            
+            // Has user already submitted a check-in for THIS week?
+            if let currentUserId = self.currentUser?.userId {
+                let hasCheckInThisWeek = latestUpdates.contains { update in
+                    guard let updateDate = update.date else { return false }
+                    let updateDay = calendar.startOfDay(for: updateDate)
+                    let isThisWeek = updateDay >= startOfWeek && updateDay <= today
+                    let isCurrentUser = update.userId == currentUserId
+                    
+                    print("🔍 BUTTON DEBUG: Checking update: date=\(updateDate), isThisWeek=\(isThisWeek), isCurrentUser=\(isCurrentUser)")
+                    
+                    return isThisWeek && isCurrentUser
+                }
+                
+                if hasCheckInThisWeek {
+                    print("🔍 BUTTON DEBUG: User already has a check-in THIS week")
+                    return false // Already submitted this week
+                } else {
+                    print("🔍 BUTTON DEBUG: No check-in found THIS week, allowing submission")
+                    return true // It's the weekend and no check-in yet for this week
+                }
+            }
+            
+            return true // Default to allowing check-ins on weekends if no user ID
+        }
+        
+        // For non-weekend days, always disable the button
+        print("🔍 BUTTON DEBUG: Not the weekend, disabling button")
+        return false
         
         #if DEBUG
         // Testing mode override
         if testingModeEnabled {
+            print("🔍 BUTTON DEBUG: Testing mode enabled, overriding to true")
             return true
         }
         #endif
@@ -1033,24 +1169,26 @@ extension AuthManager {
     }
 }
 
+// MARK: - Password Reset Extension
 extension AuthManager {
     func sendPasswordReset(email: String) async throws {
         try await auth.sendPasswordReset(withEmail: email)
     }
 }
 
+// MARK: - String Helper Extension
 extension String {
     func capitalisedFirstLetter() -> String {
         return prefix(1).uppercased() + dropFirst()
     }
 }
 
+// MARK: - User Role Enum
 enum UserRole: String, Codable, CaseIterable {
     case coach, client
 }
 
-// Add this method to your AuthManager class
-
+// MARK: - User Profile Update Extension
 extension AuthManager {
     func updateUserName(firstName: String, lastName: String) async throws {
         guard let currentUser = currentUser else {
@@ -1080,11 +1218,12 @@ extension AuthManager {
     }
 }
 
+// MARK: - Notification Extension
 extension Notification.Name {
     static let weeklyCheckInStatusChanged = Notification.Name("weeklyCheckInStatusChanged")
 }
 
-
+// MARK: - Weekly Check-in Status Debug Extension
 extension AuthManager {
     // Check if user has completed weekly check-in this week with debug logging
     func hasCompletedWeeklyCheckinThisWeek() -> Bool {
@@ -1140,7 +1279,7 @@ extension AuthManager {
     #endif
 }
 
-// MARK: - Extension to AuthManager for group actions
+// MARK: - Group Actions Extension
 extension AuthManager {
     // For clients to leave a group
     func leaveGroup() async throws {
@@ -1224,9 +1363,4 @@ extension AuthManager {
             self.currentGroup = nil
         }
     }
-    
 }
-
-
-
-

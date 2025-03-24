@@ -285,10 +285,16 @@ struct ClientHome: View {
                         
                         // Weekly Check-ins Section - only show if enabled in settings
                         if settingsViewModel.settings.showWeeklyCheckins {
-                            HStack {
+                            HStack(spacing: 8) {
                                 Text("Weekly Check-ins")
                                     .font(themeManager.headingFont(size: 18))
                                     .foregroundStyle(themeManager.textColor(for: colorScheme))
+                                
+                                // Add the countdown component
+                                WeeklyCheckinCountdown()
+                                    .environmentObject(authManager)
+                                    .environmentObject(themeManager)
+                                
                                 Spacer()
                                 Button {
                                     // Only show the form if they're eligible to submit
