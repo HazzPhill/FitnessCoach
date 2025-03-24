@@ -23,8 +23,9 @@ struct ClientHome: View {
     // Add this state for weekly reminder banner
     @State private var showWeeklyReminder: Bool = false
     
-    // Add this property to track the notification observer
+    // Add these properties to track the notification observers
     @State private var checkinStatusObserver: Any? = nil
+    @State private var weeklyCheckinObserver: Any? = nil  // Observer for notification to show add form
     
     @StateObject private var weightViewModel: WeightEntriesViewModel
     @Namespace private var namespace
@@ -56,17 +57,12 @@ struct ClientHome: View {
                     VStack(alignment: .leading, spacing: 20) {
                         // Weekly check-in reminder banner (conditional)
                         if showWeeklyReminder {
-                            WeeklyReminderBanner {
-                                // This is the action when banner is tapped
-                                showingAddUpdate = true
-                                // Optional: Add haptic feedback for the tap
-                                let generator = UIImpactFeedbackGenerator(style: .medium)
-                                generator.impactOccurred()
-                            }
-                            .environmentObject(themeManager)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showWeeklyReminder)
-                            .padding(.bottom, 8)
+                            WeeklyReminderBanner()
+                                .environmentObject(themeManager)
+                                .environmentObject(authManager)
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                                .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showWeeklyReminder)
+                                .padding(.bottom, 8)
                         }
                         
                         // Header Section
@@ -240,7 +236,7 @@ struct ClientHome: View {
                                         )
                                 }
                                 .disabled(!canAddDailyCheckin)
-                                   .opacity(canAddDailyCheckin ? 1.0 : 0.3)
+                                .opacity(canAddDailyCheckin ? 1.0 : 0.3)
                             }
                             .id("daily-header-\(lastSettingsUpdate.timeIntervalSince1970)")
 
@@ -295,16 +291,30 @@ struct ClientHome: View {
                                     .foregroundStyle(themeManager.textColor(for: colorScheme))
                                 Spacer()
                                 Button {
-                                    showingAddUpdate = true
+                                    // Only show the form if they're eligible to submit
+                                    if authManager.canSubmitWeeklyCheckin() {
+                                        showingAddUpdate = true
+                                    } else {
+                                        // Provide feedback that they missed the check-in window
+                                        let generator = UINotificationFeedbackGenerator()
+                                        generator.notificationOccurred(.error)
+                                        
+                                        // Optional: Show a temporary alert or toast message
+                                        // That they missed the window and need to wait until next weekend
+                                    }
                                 } label: {
                                     Circle()
                                         .frame(width: 30, height: 30)
-                                        .foregroundStyle(themeManager.accentColor(for: colorScheme))
+                                        .foregroundStyle(authManager.canSubmitWeeklyCheckin() ?
+                                            themeManager.accentColor(for: colorScheme) :
+                                            Color.gray.opacity(0.5))
                                         .overlay(
                                             Image(systemName: "plus")
                                                 .foregroundStyle(.white)
                                         )
                                 }
+                                .disabled(!authManager.canSubmitWeeklyCheckin())
+                                .opacity(authManager.canSubmitWeeklyCheckin() ? 1.0 : 0.3)
                                 .sensoryFeedback(.impact(flexibility: .solid, intensity: 1), trigger: showingAddUpdate)
                             }
                             .id("weekly-header-\(lastSettingsUpdate.timeIntervalSince1970)")
@@ -405,7 +415,6 @@ struct ClientHome: View {
                 // Initialize haptic engine
                 hapticFeedback.prepare()
                 
-
                 // Setup notification observer for weekly check-in status changes
                 checkinStatusObserver = NotificationCenter.default.addObserver(
                     forName: .weeklyCheckInStatusChanged,
@@ -428,10 +437,24 @@ struct ClientHome: View {
                         generator.impactOccurred()
                     }
                 }
+                
+                // Setup notification observer for showing add update form
+                weeklyCheckinObserver = NotificationCenter.default.addObserver(
+                    forName: .showAddUpdateForm,
+                    object: nil,
+                    queue: .main
+                ) { _ in
+                    if self.authManager.canSubmitWeeklyCheckin() {
+                        self.showingAddUpdate = true
+                    }
+                }
             }
             .onDisappear {
-                // Remove the observer when the view disappears
+                // Remove the observers when the view disappears
                 if let observer = checkinStatusObserver {
+                    NotificationCenter.default.removeObserver(observer)
+                }
+                if let observer = weeklyCheckinObserver {
                     NotificationCenter.default.removeObserver(observer)
                 }
             }

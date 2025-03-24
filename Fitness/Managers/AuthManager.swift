@@ -905,7 +905,133 @@ class AuthManager: ObservableObject {
     }
 }
 
-
+extension AuthManager {
+    // Enum to represent the weekly check-in status
+    enum WeeklyCheckinStatus {
+        case eligible        // User can submit a check-in (it's Saturday or Sunday)
+        case completed       // User has already completed this week's check-in
+        case missed          // User missed this week's check-in window
+        case waitingForNext  // Not eligible yet, waiting for next check-in window
+    }
+    
+    // Check the status of weekly check-ins
+    func getWeeklyCheckinStatus() -> WeeklyCheckinStatus {
+        // Get current date
+        let now = Date()
+        let calendar = Calendar.current
+        
+        // Get the current weekday (1 = Sunday, 2 = Monday, ..., 7 = Saturday)
+        let weekday = calendar.component(.weekday, from: now)
+        
+        // Check if it's the weekend (Saturday or Sunday)
+        let isWeekend = (weekday == 1 || weekday == 7)
+        
+        // Calculate the start of the current week (Sunday)
+        let today = calendar.startOfDay(for: now)
+        var weekdayComponents = calendar.dateComponents([.weekday], from: today)
+        let daysToSubtract = weekdayComponents.weekday! - 1 // 1 is Sunday in Gregorian calendar
+        
+        guard let startOfWeek = calendar.date(byAdding: .day, value: -daysToSubtract, to: today) else {
+            // Fallback - if we can't calculate, just let them check in
+            return .eligible
+        }
+        
+        print("📅 Checking weekly check-in status:")
+        print("   - Today: \(today)")
+        print("   - Current weekday: \(weekday) (1=Sunday, 7=Saturday)")
+        print("   - Start of week: \(startOfWeek)")
+        print("   - Is weekend: \(isWeekend)")
+        
+        // Get the most recent check-in for the current week
+        let weeklyCheckIn = latestUpdates.first { update in
+            guard let updateDate = update.date else { return false }
+            return updateDate >= startOfWeek
+        }
+        
+        // If there's a check-in this week already, they're done
+        if weeklyCheckIn != nil {
+            print("✅ User has completed a check-in this week")
+            return .completed
+        }
+        
+        // If it's the weekend and no check-in, they can submit
+        if isWeekend {
+            print("📅 It's the weekend - user can submit check-in")
+            return .eligible
+        }
+        
+        // If it's Monday-Friday and no weekend check-in, they missed it
+        if weekday >= 2 && weekday <= 6 {
+            // Check if there was a check-in from the previous week
+            
+            // Calculate start of previous week
+            guard let startOfPreviousWeek = calendar.date(byAdding: .day, value: -7, to: startOfWeek) else {
+                // If we can't calculate, be lenient
+                return .waitingForNext
+            }
+            
+            // Calculate end of previous weekend (end of Sunday)
+            guard let endOfPreviousWeekend = calendar.date(byAdding: .day, value: 1, to: startOfWeek) else {
+                return .waitingForNext
+            }
+            let endOfDay = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: endOfPreviousWeekend) ?? endOfPreviousWeekend
+            
+            // Find check-ins from previous week's weekend
+            let previousWeekendCheckin = latestUpdates.first { update in
+                guard let updateDate = update.date else { return false }
+                return updateDate >= startOfPreviousWeek && updateDate <= endOfDay
+            }
+            
+            if previousWeekendCheckin == nil {
+                print("❌ No check-in from the previous weekend - user missed it")
+                return .missed
+            } else {
+                print("⏱️ User completed last week's check-in, waiting for next weekend")
+                return .waitingForNext
+            }
+        }
+        
+        // Default case - should wait for the weekend
+        return .waitingForNext
+    }
+    
+    // Public method for UI to check if user should see the reminder banner
+    func shouldShowWeeklyCheckinReminder() -> Bool {
+        // Get the actual status
+        let status = getWeeklyCheckinStatus()
+        
+        // Only show reminder in these cases:
+        // 1. It's the weekend and they haven't checked in yet
+        // 2. They missed last week's check-in (but don't let them check in)
+        return status == .eligible || status == .missed
+        
+        #if DEBUG
+        // Testing mode override
+        if testingModeEnabled {
+            return true
+        }
+        #endif
+    }
+    
+    // Public method to check if user can actually submit a check-in
+    func canSubmitWeeklyCheckin() -> Bool {
+        return getWeeklyCheckinStatus() == .eligible
+        
+        #if DEBUG
+        // Testing mode override
+        if testingModeEnabled {
+            return true
+        }
+        #endif
+    }
+    
+    // Method to dismiss the missed check-in banner
+    func dismissMissedCheckinBanner() {
+        // You could store this in UserDefaults to persist the dismissal
+        // For now we'll just post a notification to update the UI
+        NotificationCenter.default.post(name: .weeklyCheckInStatusChanged, object: nil)
+    }
+}
 
 extension AuthManager {
     func sendPasswordReset(email: String) async throws {
@@ -1012,39 +1138,6 @@ extension AuthManager {
     #if DEBUG
     var testingModeEnabled: Bool { return false } // Set to true to test banner on any day
     #endif
-    
-    // Check if we should show the weekly check-in reminder with enhanced logging
-    func shouldShowWeeklyCheckinReminder() -> Bool {
-        // Get current date
-        let now = Date()
-        let calendar = Calendar.current
-        
-        // Check if today is Monday
-        let weekday = calendar.component(.weekday, from: now)
-        let isMonday = (weekday == 2) // 2 = Monday
-        
-        print("📅 Current weekday: \(weekday) (2=Monday)")
-        
-        #if DEBUG
-        // In testing mode, ignore the day check
-        if testingModeEnabled {
-            let hasCompleted = hasCompletedWeeklyCheckinThisWeek()
-            let shouldShow = !hasCompleted
-            print("🧪 TESTING MODE: Should show reminder? \(shouldShow ? "YES" : "NO")")
-            return shouldShow
-        }
-        #endif
-        
-        // Check if weekly check-in is done
-        let hasCompleted = hasCompletedWeeklyCheckinThisWeek()
-        
-        // Normal operation - only show on Monday and only if no weekly check-in was done
-        let shouldShow = isMonday && !hasCompleted
-        
-        print("🔔 Should show reminder banner? \(shouldShow ? "YES" : "NO") (isMonday: \(isMonday), hasCompletedCheckin: \(hasCompleted))")
-        
-        return shouldShow
-    }
 }
 
 // MARK: - Extension to AuthManager for group actions
