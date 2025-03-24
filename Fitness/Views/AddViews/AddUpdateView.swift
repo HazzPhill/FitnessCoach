@@ -333,7 +333,6 @@ struct AddUpdateView: View {
         isSubmitting = true
         Task {
             do {
-                // Note: You'll need to update the addUpdate method in AuthManager to accept finalScore.
                 try await authManager.addUpdate(
                     name: updateName,
                     weight: weight,
@@ -343,6 +342,16 @@ struct AddUpdateView: View {
                     extraCoachRequest: extraCoachRequest,
                     finalScore: finalScore
                 )
+                
+                // Force refresh the updates collection
+                authManager.refreshWeeklyUpdates()
+                
+                // Post notification that weekly check-in status changed
+                NotificationCenter.default.post(name: .weeklyCheckInStatusChanged, object: nil)
+                
+                // Add a small delay to ensure Firebase operations complete
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                
                 dismiss()
             } catch {
                 errorMessage = error.localizedDescription

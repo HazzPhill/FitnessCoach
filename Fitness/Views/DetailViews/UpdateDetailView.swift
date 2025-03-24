@@ -229,7 +229,6 @@ struct UpdateDetailView: View {
         }
     }
     
-    // Function to delete the update
     private func deleteUpdate() {
         guard let updateId = update.id else {
             print("Error: No update ID found")
@@ -240,8 +239,17 @@ struct UpdateDetailView: View {
             do {
                 try await authManager.deleteUpdate(updateId: updateId)
                 
+                // Force refresh the updates
+                authManager.refreshWeeklyUpdates()
+                
+                // Post a notification that an update was deleted
+                NotificationCenter.default.post(name: .weeklyCheckInStatusChanged, object: nil)
+                
+                // Add a small delay to ensure Firebase operations complete
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                
                 // Return to previous screen
-                DispatchQueue.main.async {
+                await MainActor.run {
                     dismiss()
                 }
             } catch {

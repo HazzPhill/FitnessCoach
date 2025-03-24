@@ -219,34 +219,48 @@ class AuthManager: ObservableObject {
         }
     }
 
-    // Updated cleanupOldCheckins method
     func cleanupOldCheckins() async {
         guard let userId = currentUser?.userId else { return }
         
         do {
             let calendar = Calendar.current
-            let today = Date()
-            let weekday = calendar.component(.weekday, from: today)
+            let now = Date()
+            let weekday = calendar.component(.weekday, from: now)
+            let hour = calendar.component(.hour, from: now)
             
-            // Check if today is Monday (weekday == 2 in Calendar, as Sunday == 1)
+            print("🧹 CLEANUP: Running check - Current weekday: \(weekday) (2=Monday), hour: \(hour)")
+            
+            // Check if today is Monday (weekday == 2) and after 9am
             let isMonday = (weekday == 2)
+            let isAfter9AM = (hour >= 9)
             
-            if isMonday {
-                // On Monday, get ALL check-ins for this user regardless of date
+            if isMonday && isAfter9AM {
+                print("🧹 CLEANUP: It's Monday after 9AM - running weekly cleanup")
+                
+                // IMPORTANT: Calculate start of today (Monday) at midnight
+                let startOfToday = calendar.startOfDay(for: now)
+                
+                // Only delete check-ins BEFORE today (previous week's check-ins)
+                // This preserves any check-ins added today (Monday)
                 let snapshot = try await db.collection("daily_checkins")
                     .whereField("userId", isEqualTo: userId)
+                    .whereField("date", isLessThan: startOfToday) // This is the key change
                     .getDocuments()
                 
-                // Delete each check-in
+                print("📊 CLEANUP: Found \(snapshot.documents.count) check-ins from previous week")
+                
+                // Delete each check-in from previous week
+                var deleteCount = 0
                 for document in snapshot.documents {
-                    try await db.collection("daily_checkins").document(document.documentID).delete()
-                    print("Deleted check-in for Monday cleanup: \(document.documentID)")
+                    try await db.collection("daily_c®heckins").document(document.documentID).delete()
+                    deleteCount += 1
+                    print("✅ CLEANUP: Deleted old check-in: \(document.documentID)")
                 }
                 
-                print("Completed Monday cleanup of ALL daily check-ins")
+                print("🧹 CLEANUP: Monday cleanup completed - Deleted \(deleteCount) check-ins from previous week")
             } else {
-                // On other days, just delete check-ins older than today (original behavior)
-                let startOfToday = calendar.startOfDay(for: today)
+                // On other days or before 9am, just delete check-ins older than today (original behavior)
+                let startOfToday = calendar.startOfDay(for: now)
                 
                 let snapshot = try await db.collection("daily_checkins")
                     .whereField("userId", isEqualTo: userId)
@@ -256,16 +270,19 @@ class AuthManager: ObservableObject {
                 // Delete each check-in
                 for document in snapshot.documents {
                     try await db.collection("daily_checkins").document(document.documentID).delete()
-                    print("Deleted old check-in: \(document.documentID)")
+                    print("✅ CLEANUP: Deleted old check-in: \(document.documentID)")
                 }
                 
-                print("Completed regular cleanup of old daily check-ins")
+                print("🧹 CLEANUP: Regular cleanup completed")
             }
+            
+            // Also try checking the alternative collection name (dailyCheckins) if relevant
+            // This is just in case your app uses both collection names
             
             // Refresh the local cache after deletion
             refreshDailyCheckins()
         } catch {
-            print("Error cleaning up daily check-ins: \(error.localizedDescription)")
+            print("❌ CLEANUP Error: \(error.localizedDescription)")
         }
     }
     
@@ -751,28 +768,54 @@ class AuthManager: ObservableObject {
             print("❌ Error during forced cleanup: \(error.localizedDescription)")
         }
     }
+    
+    func refreshWeeklyUpdates() {
+        print("🔄 Manually refreshing weekly updates")
+        // Re-setup the updates listener to force a refresh
+        setupUpdatesListener()
+        setupYearlyUpdatesListener()
+    }
 
     func deleteUpdate(updateId: String) async throws {
         guard let currentUser = currentUser else {
             throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
         
+        print("🗑️ Attempting to delete update with ID: \(updateId)")
+        
         // Get the update document to check ownership
         let document = try await db.collection("updates").document(updateId).getDocument()
         
+        // Log the document data for debugging
+        if let data = document.data() {
+            print("📄 Document data: \(data)")
+        } else {
+            print("❌ Document not found or empty")
+        }
+        
         // Verify the current user owns this update
-        guard let userId = document.data()?["userId"] as? String, userId == currentUser.userId else {
-            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "You don't have permission to delete this update"])
+        if let userId = document.data()?["userId"] as? String {
+            print("👤 Document userId: \(userId), Current userId: \(currentUser.userId)")
+            
+            if userId != currentUser.userId {
+                print("⛔ Permission denied - user doesn't own this update")
+                throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "You don't have permission to delete this update"])
+            }
+        } else {
+            print("⚠️ No userId found in the document")
         }
         
         // Delete the update document
+        print("✅ Proceeding with deletion...")
         try await db.collection("updates").document(updateId).delete()
+        print("✅ Document deleted successfully")
         
         // Refresh the updates
         setupUpdatesListener()
         setupYearlyUpdatesListener() // Also refresh the yearly updates since this might affect them
+        
+        print("🔄 Update listeners refreshed")
     }
-    
     
     func scheduleWeeklyNotification() {
         let content = UNMutableNotificationContent()
