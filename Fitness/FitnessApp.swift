@@ -33,6 +33,12 @@ struct FitnessApp: App {
         }
         
     }
+    
+    // Add this method to check for Monday cleanup when app becomes active
+       func applicationDidBecomeActive(_ application: UIApplication) {
+           // Check and run Monday cleanup when app becomes active
+           AuthManager.shared.checkAndRunMondayCleanup()
+       }
 
     var body: some Scene {
         WindowGroup {

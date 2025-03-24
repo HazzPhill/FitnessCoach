@@ -89,6 +89,11 @@ class AuthManager: ObservableObject {
                 self?.dailyCheckins = []
             }
         }
+        
+        // Schedule all notifications including the Monday cleanup
+        scheduleWeeklyNotification()
+        scheduleDailyNotification()
+        scheduleMondayCleanupNotification()
     }
     
     // MARK: - Authentication Methods
@@ -169,6 +174,52 @@ class AuthManager: ObservableObject {
     }
     
 
+    // Schedule a notification for 9am Monday
+    func scheduleMondayCleanupNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Weekly Reset"
+        content.body = "Your daily check-ins have been reset for the new week."
+        content.sound = .default
+
+        var dateComponents = DateComponents()
+        dateComponents.weekday = 2  // Monday (Calendar uses 1 for Sunday, 2 for Monday)
+        dateComponents.hour = 9     // 9 AM
+        dateComponents.minute = 0
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
+        let request = UNNotificationRequest(identifier: "mondayCleanup", content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling Monday cleanup notification: \(error)")
+            } else {
+                print("Monday 9am cleanup notification scheduled successfully")
+            }
+        }
+    }
+
+    // Check if it's Monday after 9AM
+    func isMondayAfter9AM() -> Bool {
+        let calendar = Calendar.current
+        let now = Date()
+        let weekday = calendar.component(.weekday, from: now)
+        let hour = calendar.component(.hour, from: now)
+        
+        // It's Monday (2) after 9am
+        return weekday == 2 && hour >= 9
+    }
+
+    // Check and run Monday cleanup if needed
+    func checkAndRunMondayCleanup() {
+        if isMondayAfter9AM() {
+            print("It's Monday after 9AM - running weekly cleanup")
+            Task {
+                await cleanupOldCheckins()
+            }
+        }
+    }
+
+    // Updated cleanupOldCheckins method
     func cleanupOldCheckins() async {
         guard let userId = currentUser?.userId else { return }
         
@@ -653,6 +704,53 @@ class AuthManager: ObservableObject {
             throw error
         }
     }
+    
+    
+    // Add this function to AuthManager.swift to force a manual cleanup
+    func forceCleanupAllDailyCheckins() async {
+        guard let userId = currentUser?.userId else {
+            print("❌ Cannot perform cleanup: No current user")
+            return
+        }
+        
+        print("🧹 Starting FORCED cleanup of ALL daily check-ins for user: \(userId)")
+        
+        do {
+            // Try with the main collection name
+            var snapshot = try await db.collection("daily_checkins")
+                .whereField("userId", isEqualTo: userId)
+                .getDocuments()
+            
+            print("📊 Found \(snapshot.documents.count) check-ins in 'daily_checkins' collection")
+            
+            // Delete each check-in
+            for document in snapshot.documents {
+                try await db.collection("daily_checkins").document(document.documentID).delete()
+                print("✅ Deleted check-in: \(document.documentID)")
+            }
+            
+            // Also try with alternative capitalization (dailyCheckins)
+            snapshot = try await db.collection("dailyCheckins")
+                .whereField("userId", isEqualTo: userId)
+                .getDocuments()
+            
+            print("📊 Found \(snapshot.documents.count) check-ins in 'dailyCheckins' collection")
+            
+            // Delete each check-in
+            for document in snapshot.documents {
+                try await db.collection("dailyCheckins").document(document.documentID).delete()
+                print("✅ Deleted check-in: \(document.documentID)")
+            }
+            
+            // Refresh the local cache after deletion
+            print("🔄 Refreshing local cache")
+            refreshDailyCheckins()
+            
+            print("✅ Manual cleanup completed")
+        } catch {
+            print("❌ Error during forced cleanup: \(error.localizedDescription)")
+        }
+    }
 
     func deleteUpdate(updateId: String) async throws {
         guard let currentUser = currentUser else {
@@ -674,6 +772,7 @@ class AuthManager: ObservableObject {
         setupUpdatesListener()
         setupYearlyUpdatesListener() // Also refresh the yearly updates since this might affect them
     }
+    
     
     func scheduleWeeklyNotification() {
         let content = UNMutableNotificationContent()
@@ -795,6 +894,99 @@ extension AuthManager {
     }
 }
 
+extension Notification.Name {
+    static let weeklyCheckInStatusChanged = Notification.Name("weeklyCheckInStatusChanged")
+}
+
+
+extension AuthManager {
+    // Check if user has completed weekly check-in this week with debug logging
+    func hasCompletedWeeklyCheckinThisWeek() -> Bool {
+        guard let userId = currentUser?.userId else {
+            print("👤 No current user found when checking weekly status")
+            return false
+        }
+        
+        // Get current date
+        let now = Date()
+        let calendar = Calendar.current
+        
+        // Calculate the start of the current week (Sunday)
+        let today = calendar.startOfDay(for: now)
+        let weekday = calendar.component(.weekday, from: today)
+        let daysToSubtract = weekday - 1 // 1 = Sunday in Calendar
+        
+        guard let startOfWeek = calendar.date(byAdding: .day, value: -daysToSubtract, to: today) else {
+            print("📅 Could not calculate start of week")
+            return false
+        }
+        
+        print("📅 Checking for updates since: \(startOfWeek)")
+        
+        // Check if there's any update from this week
+        let matchingUpdates = latestUpdates.filter { update in
+            guard let updateDate = update.date else { return false }
+            let isThisWeek = updateDate >= startOfWeek && update.userId == userId
+            return isThisWeek
+        }
+        
+        let hasCompletedCheckIn = !matchingUpdates.isEmpty
+        
+        print("🔍 Found \(matchingUpdates.count) updates for this week. Has completed check-in: \(hasCompletedCheckIn)")
+        
+        if !matchingUpdates.isEmpty {
+            // For debugging, print info about the most recent update
+            if let latestUpdate = matchingUpdates.first,
+               let updateDate = latestUpdate.date {
+                let formatter = DateFormatter()
+                formatter.dateStyle = .medium
+                formatter.timeStyle = .short
+                print("📝 Most recent check-in: \(formatter.string(from: updateDate))")
+            }
+        }
+        
+        return hasCompletedCheckIn
+    }
+    
+    // TESTING CONTROLS - Set to true to force banner to show regardless of day
+    #if DEBUG
+    var testingModeEnabled: Bool { return false } // Set to true to test banner on any day
+    #endif
+    
+    // Check if we should show the weekly check-in reminder with enhanced logging
+    func shouldShowWeeklyCheckinReminder() -> Bool {
+        // Get current date
+        let now = Date()
+        let calendar = Calendar.current
+        
+        // Check if today is Monday
+        let weekday = calendar.component(.weekday, from: now)
+        let isMonday = (weekday == 2) // 2 = Monday
+        
+        print("📅 Current weekday: \(weekday) (2=Monday)")
+        
+        #if DEBUG
+        // In testing mode, ignore the day check
+        if testingModeEnabled {
+            let hasCompleted = hasCompletedWeeklyCheckinThisWeek()
+            let shouldShow = !hasCompleted
+            print("🧪 TESTING MODE: Should show reminder? \(shouldShow ? "YES" : "NO")")
+            return shouldShow
+        }
+        #endif
+        
+        // Check if weekly check-in is done
+        let hasCompleted = hasCompletedWeeklyCheckinThisWeek()
+        
+        // Normal operation - only show on Monday and only if no weekly check-in was done
+        let shouldShow = isMonday && !hasCompleted
+        
+        print("🔔 Should show reminder banner? \(shouldShow ? "YES" : "NO") (isMonday: \(isMonday), hasCompletedCheckin: \(hasCompleted))")
+        
+        return shouldShow
+    }
+}
+
 // MARK: - Extension to AuthManager for group actions
 extension AuthManager {
     // For clients to leave a group
@@ -879,4 +1071,9 @@ extension AuthManager {
             self.currentGroup = nil
         }
     }
+    
 }
+
+
+
+

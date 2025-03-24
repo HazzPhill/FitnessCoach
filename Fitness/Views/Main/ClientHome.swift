@@ -3,6 +3,7 @@ import FirebaseStorage
 import FirebaseFirestore
 import CachedAsyncImage
 import CoreHaptics
+import Foundation
 
 struct ClientHome: View {
     let client: AuthManager.DBUser
@@ -18,6 +19,12 @@ struct ClientHome: View {
     @State private var refreshDailyCheckins = false // Trigger for refreshing daily check-ins
     @State private var canAddDailyCheckin: Bool = true // Track if user can add a check-in today
     @State private var checkinsCount: Int = 0 // Used to track changes in checkins array
+    
+    // Add this state for weekly reminder banner
+    @State private var showWeeklyReminder: Bool = false
+    
+    // Add this property to track the notification observer
+    @State private var checkinStatusObserver: Any? = nil
     
     @StateObject private var weightViewModel: WeightEntriesViewModel
     @Namespace private var namespace
@@ -45,10 +52,23 @@ struct ClientHome: View {
                 themeManager.backgroundColor(for: colorScheme)
                     .ignoresSafeArea()
                 
-        
-                
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
+                        // Weekly check-in reminder banner (conditional)
+                        if showWeeklyReminder {
+                            WeeklyReminderBanner {
+                                // This is the action when banner is tapped
+                                showingAddUpdate = true
+                                // Optional: Add haptic feedback for the tap
+                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                generator.impactOccurred()
+                            }
+                            .environmentObject(themeManager)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showWeeklyReminder)
+                            .padding(.bottom, 8)
+                        }
+                        
                         // Header Section
                         HStack {
                             Text("Welcome \(authManager.currentUser?.firstName ?? "")")
@@ -360,7 +380,10 @@ struct ClientHome: View {
                     .environmentObject(themeManager)
             }
             // Weekly check-in sheet
-            .sheet(isPresented: $showingAddUpdate) {
+            .sheet(isPresented: $showingAddUpdate, onDismiss: {
+                // Check if we still need to show the reminder after adding an update
+                updateWeeklyReminderStatus()
+            }) {
                 AddUpdateView()
                     .environmentObject(authManager)
                     .environmentObject(themeManager)
@@ -372,6 +395,31 @@ struct ClientHome: View {
                 checkinsCount = authManager.dailyCheckins.count
                 // Check if user can add a check-in today
                 checkDailyCheckinStatus()
+                
+                // Check and run Monday cleanup if needed
+                authManager.checkAndRunMondayCleanup()
+                
+                // Check if we should show weekly reminder banner
+                updateWeeklyReminderStatus()
+                
+                // Initialize haptic engine
+                hapticFeedback.prepare()
+                
+                // Setup notification observer for weekly check-in status changes
+                checkinStatusObserver = NotificationCenter.default.addObserver(
+                    forName: .weeklyCheckInStatusChanged,
+                    object: nil,
+                    queue: .main
+                ) { _ in
+                    // For structs, we don't use [weak self] - just access self directly
+                    self.updateWeeklyReminderStatus()
+                }
+            }
+            .onDisappear {
+                // Remove the observer when the view disappears
+                if let observer = checkinStatusObserver {
+                    NotificationCenter.default.removeObserver(observer)
+                }
             }
             // Use a timer to periodically check status (handles deletion case)
             .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
@@ -388,6 +436,11 @@ struct ClientHome: View {
                 withAnimation {
                     lastSettingsUpdate = Date()
                 }
+            }
+            // Replace the onChange for latestUpdates with a timer
+            .onReceive(Timer.publish(every: 5, on: .main, in: .common).autoconnect()) { _ in
+                // Periodically check if banner status needs updating
+                updateWeeklyReminderStatus()
             }
         }
     }
@@ -410,6 +463,15 @@ struct ClientHome: View {
         withAnimation {
             canAddDailyCheckin = !hasCheckinForToday
         }
+    }
+    
+    // New method to update weekly reminder banner status
+    private func updateWeeklyReminderStatus() {
+        // Check if we should show the banner based on latest data
+        withAnimation {
+            showWeeklyReminder = authManager.shouldShowWeeklyCheckinReminder()
+        }
+        print("Weekly reminder status updated: \(showWeeklyReminder ? "SHOWING" : "HIDDEN")")
     }
 }
 
