@@ -16,9 +16,13 @@ struct ClientView: View {
     
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var authManager: AuthManager
     
     @Namespace private var namespace
     @Namespace private var checkinNamespace
+    
+    // Add refresh state
+    @State private var isRefreshing = false
     
     // Add states for Training PDF functionality
     @State private var showTrainingPDFUploader = false
@@ -29,6 +33,10 @@ struct ClientView: View {
     @State private var currentVisibleDay: String = ""
     @State private var engine: CHHapticEngine?
     
+    // Debug state to track settings changes
+    @State private var lastSettingsUpdate = Date()
+    
+    // Initialize the weight view model with the current user's ID
     init(client: AuthManager.DBUser) {
         self.client = client
         _updatesViewModel = StateObject(wrappedValue: ClientUpdatesViewModel(clientId: client.userId))
@@ -52,6 +60,22 @@ struct ClientView: View {
                                 .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                                 .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
                             Spacer()
+                            
+                            // Add refresh button
+                            Button(action: {
+                                refreshData()
+                                // Haptic feedback
+                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                generator.impactOccurred()
+                            }) {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
+                                    .rotationEffect(Angle(degrees: isRefreshing ? 360 : 0))
+                                    .animation(isRefreshing ? Animation.linear(duration: 1).repeatForever(autoreverses: false) : .default, value: isRefreshing)
+                            }
+                            .padding(.horizontal, 8)
+                            
                             if let profileImageUrl = client.profileImageUrl,
                                let url = URL(string: profileImageUrl) {
                                 AsyncImage(url: url) { phase in
@@ -222,15 +246,53 @@ struct ClientView: View {
                                 Text("Weekly Check-ins")
                                     .font(themeManager.headingFont(size: 18))
                                     .foregroundStyle(themeManager.textColor(for: colorScheme))
+                                
+                                // Show the update count to help with debugging
+                                if !updatesViewModel.updates.isEmpty {
+                                    Text("(\(updatesViewModel.updates.count))")
+                                        .font(themeManager.captionFont())
+                                        .foregroundStyle(themeManager.accentColor(for: colorScheme))
+                                }
+                                
                                 Spacer()
+                                
+                                // Add refresh button for weekly check-ins specifically
+                                Button(action: {
+                                    // Force manual refresh of updates
+                                    updatesViewModel.forceRefresh()
+                                    
+                                    // Add haptic feedback
+                                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                                    generator.impactOccurred()
+                                    
+                                    // Run debug function
+                                    Task {
+                                        await authManager.debugClientUpdates(clientId: client.userId)
+                                    }
+                                }) {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                        .foregroundColor(themeManager.accentColor(for: colorScheme))
+                                        .font(.system(size: 16))
+                                }
                             }
-                            ScrollView {
-                                if updatesViewModel.updates.isEmpty {
+                            .padding(.horizontal)
+                            
+                            if updatesViewModel.updates.isEmpty {
+                                VStack {
                                     Text("No weekly check-ins yet.")
                                         .font(themeManager.bodyFont(size: 16))
                                         .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.6))
                                         .padding()
-                                } else {
+                                    
+                                    // Add troubleshooting text
+                                    Text("If check-ins exist but aren't showing, try refreshing")
+                                        .font(themeManager.captionFont())
+                                        .foregroundColor(themeManager.accentColor(for: colorScheme))
+                                        .padding(.top, -8)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .center)
+                            } else {
+                                ScrollView {
                                     ForEach(updatesViewModel.updates) { update in
                                         NavigationLink {
                                             UpdateDetailView(update: update)
@@ -253,17 +315,38 @@ struct ClientView: View {
                                         })
                                     }
                                 }
+                                .scrollIndicators(.hidden)
                             }
-                            .scrollIndicators(.hidden)
                         }
                     }
                     .padding()
+                    .id(isRefreshing) // Force reload on refresh
                 }
                 .scrollContentBackground(.hidden) // This fixes the white bar when scrolling
+                .refreshable {
+                    // Pull-to-refresh behavior
+                    await refreshDataAsync()
+                }
+                
+                // Show loading indicator during refresh
+                if isRefreshing {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                                .tint(themeManager.accentColor(for: colorScheme))
+                                .scaleEffect(1.5)
+                            Spacer()
+                        }
+                        Spacer()
+                    }
+                    .background(Color.black.opacity(0.1))
+                }
             }
             .onAppear {
-                // Refresh weight entries when view appears to make sure we have the most current data
-                weightViewModel.fetchAllWeightEntries(userId: client.userId)
+                // Refresh data when view appears
+                refreshData()
                 
                 // Fetch client visibility settings
                 settingsViewModel.fetchSettings()
@@ -383,6 +466,58 @@ struct ClientView: View {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(Color(hex: "C6C6C6"), lineWidth: 2)
                 )
+            }
+        }
+    }
+    
+    // Function to refresh all data
+    private func refreshData() {
+        print("🔄 Manually refreshing client data for: \(client.firstName) \(client.lastName)")
+        
+        withAnimation {
+            isRefreshing = true
+        }
+        
+        // Refresh all view models
+        updatesViewModel.forceRefresh()
+        weightViewModel.fetchAllWeightEntries(userId: client.userId)
+        
+        // Force refresh of client data
+        Task {
+            // Wait a moment for Firebase operations to complete
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            
+            // Debug client updates
+            await authManager.debugClientUpdates(clientId: client.userId)
+            
+            // Stop the refresh animation
+            await MainActor.run {
+                withAnimation {
+                    isRefreshing = false
+                }
+            }
+        }
+    }
+    
+    // Async version of refresh for refreshable
+    private func refreshDataAsync() async {
+        // Create a delay to make the refresh spinner visible
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        
+        // Force Firebase refresh
+        updatesViewModel.forceRefresh()
+        weightViewModel.fetchAllWeightEntries(userId: client.userId)
+        
+        // Debug client updates
+        await authManager.debugClientUpdates(clientId: client.userId)
+        
+        // Wait a moment for Firebase operations to complete
+        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+        
+        // Update UI state
+        await MainActor.run {
+            withAnimation {
+                isRefreshing = false
             }
         }
     }

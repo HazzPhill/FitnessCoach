@@ -508,27 +508,55 @@ class AuthManager: ObservableObject {
             }
     }
     
+    // Replace the setupUpdatesListener method in AuthManager.swift
     func setupUpdatesListener() {
         if let currentUser = auth.currentUser {
             print("Setting up updates for: \(currentUser.uid)")
             
             updatesListener?.remove()
             
+            // Use a more robust query that's less likely to have timing issues
+            let calendar = Calendar.current
+            
+            // Get date from 3 months ago to ensure we capture all recent updates
+            let threeMonthsAgo = calendar.date(byAdding: .month, value: -3, to: Date()) ?? Date()
+            
             updatesListener = db.collection("updates")
-                .whereField("userId", isEqualTo: currentUser.uid)  // Using auth.currentUser.uid directly
+                .whereField("userId", isEqualTo: currentUser.uid)
+                .whereField("date", isGreaterThan: Timestamp(date: threeMonthsAgo))
                 .order(by: "date", descending: true)
                 .addSnapshotListener { [weak self] snapshot, error in
-                    guard let self = self, let snapshot = snapshot else { return }
+                    guard let self = self else { return }
+                    if let error = error {
+                        print("❌ Error fetching updates: \(error.localizedDescription)")
+                        return
+                    }
+                    
+                    if let snapshot = snapshot {
+                        print("📊 Found \(snapshot.documents.count) update documents in snapshot")
+                    }
+                    
                     do {
-                        let updates = try snapshot.documents.compactMap { doc -> Update? in
-                            try doc.data(as: Update.self)
-                        }
+                        let updates = try snapshot?.documents.compactMap { doc -> AuthManager.Update? in
+                            // Log each document ID to help with debugging
+                            print("💾 Processing update document: \(doc.documentID)")
+                            return try doc.data(as: AuthManager.Update.self)
+                        } ?? []
+                        
                         DispatchQueue.main.async {
                             self.latestUpdates = updates
-                            print("Found \(updates.count) updates for current user")
+                            print("✅ Updated latestUpdates with \(updates.count) items")
+                            
+                            // Log the most recent update for debugging
+                            if let mostRecent = updates.first, let date = mostRecent.date {
+                                let formatter = DateFormatter()
+                                formatter.dateStyle = .full
+                                formatter.timeStyle = .medium
+                                print("📅 Most recent update: \(formatter.string(from: date))")
+                            }
                         }
                     } catch {
-                        print("Error decoding updates: \(error.localizedDescription)")
+                        print("❌ Error decoding updates: \(error.localizedDescription)")
                     }
                 }
         }
@@ -788,6 +816,7 @@ class AuthManager: ObservableObject {
     
     // MARK: - Update Refreshing
     
+    // Also enhance the refreshWeeklyUpdates method
     func refreshWeeklyUpdates() {
         print("🔄 Manually refreshing weekly updates")
         
@@ -1053,8 +1082,8 @@ extension AuthManager {
                 guard let updateDate = update.date,
                       let currentUserId = self.currentUser?.userId else { return false }
                 return updateDate >= startOfPreviousWeek &&
-                       updateDate <= endOfDay &&
-                       update.userId == currentUserId
+                updateDate <= endOfDay &&
+                update.userId == currentUserId
             }
             
             if previousWeekendCheckin == nil {
@@ -1070,22 +1099,25 @@ extension AuthManager {
         return .waitingForNext
     }
     
-    // Public method for UI to check if user should see the reminder banner
     func shouldShowWeeklyCheckinReminder() -> Bool {
         // Get the actual status
         let status = getWeeklyCheckinStatus()
+        
+        // Check if user has recently dismissed the banner
+        if status == .missed {
+            if let lastDismissalDate = UserDefaults.standard.object(forKey: "lastBannerDismissalDate") as? Date {
+                // If banner was dismissed in the last 24 hours, don't show it again
+                let dismissalAge = Date().timeIntervalSince(lastDismissalDate)
+                if dismissalAge < 86400 { // 24 hours in seconds
+                    return false
+                }
+            }
+        }
         
         // Only show reminder in these cases:
         // 1. It's the weekend and they haven't checked in yet
         // 2. They missed last week's check-in (but don't let them check in)
         return status == .eligible || status == .missed
-        
-        #if DEBUG
-        // Testing mode override
-        if testingModeEnabled {
-            return true
-        }
-        #endif
     }
     
     // Public method to check if user can actually submit a check-in
@@ -1152,19 +1184,20 @@ extension AuthManager {
         print("🔍 BUTTON DEBUG: Not the weekend, disabling button")
         return false
         
-        #if DEBUG
+#if DEBUG
         // Testing mode override
         if testingModeEnabled {
             print("🔍 BUTTON DEBUG: Testing mode enabled, overriding to true")
             return true
         }
-        #endif
+#endif
     }
     
-    // Method to dismiss the missed check-in banner
     func dismissMissedCheckinBanner() {
-        // You could store this in UserDefaults to persist the dismissal
-        // For now we'll just post a notification to update the UI
+        // Store the current date as the last dismissal time
+        UserDefaults.standard.set(Date(), forKey: "lastBannerDismissalDate")
+        
+        // Post notification to update the UI
         NotificationCenter.default.post(name: .weeklyCheckInStatusChanged, object: nil)
     }
 }
@@ -1277,6 +1310,95 @@ extension AuthManager {
     #if DEBUG
     var testingModeEnabled: Bool { return false } // Set to true to test banner on any day
     #endif
+}
+
+extension AuthManager {
+    // Public method to debug weekly check-ins
+    func debugClientUpdates(clientId: String) async {
+        print("🔍 DEBUGGING CLIENT UPDATES FOR: \(clientId)")
+        
+        do {
+            // 1. Check client's existence
+            let clientDoc = try await db.collection("users").document(clientId).getDocument()
+            print("👤 Client document exists: \(clientDoc.exists)")
+            
+            // 2. Directly query client's updates without filters
+            let updatesSnapshot = try await db.collection("updates")
+                .whereField("userId", isEqualTo: clientId)
+                .order(by: "date", descending: true)
+                .getDocuments()
+            
+            print("📊 Found \(updatesSnapshot.documents.count) total updates for client")
+            
+            // 3. Print details about each update
+            for (index, doc) in updatesSnapshot.documents.enumerated() {
+                print("------- Update \(index + 1) -------")
+                print("🆔 Document ID: \(doc.documentID)")
+                
+                if let timestamp = doc.data()["date"] as? Timestamp {
+                    let date = timestamp.dateValue()
+                    let formatter = DateFormatter()
+                    formatter.dateStyle = .full
+                    formatter.timeStyle = .medium
+                    print("📅 Date: \(formatter.string(from: date))")
+                    
+                    // Check if this update is from the weekend
+                    let calendar = Calendar.current
+                    let weekday = calendar.component(.weekday, from: date)
+                    let isWeekend = (weekday == 1 || weekday == 7) // 1 = Sunday, 7 = Saturday
+                    print("🏠 Weekend update: \(isWeekend ? "YES" : "NO") (weekday = \(weekday))")
+                } else {
+                    print("⚠️ No date field found")
+                }
+                
+                // Print other relevant fields
+                if let weight = doc.data()["weight"] as? Double {
+                    print("⚖️ Weight: \(weight) KG")
+                }
+                
+                if let name = doc.data()["name"] as? String {
+                    print("📝 Name: \(name)")
+                }
+                
+                print("-----------------------------")
+            }
+            
+            // 4. Check for any Sunday night updates specifically
+            let calendar = Calendar.current
+            let today = calendar.startOfDay(for: Date())
+            let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
+            let sundayNightStart = calendar.date(bySettingHour: 18, minute: 0, second: 0, of: yesterday)!
+            
+            let sundayNightUpdates = try await db.collection("updates")
+                .whereField("userId", isEqualTo: clientId)
+                .whereField("date", isGreaterThan: Timestamp(date: sundayNightStart))
+                .whereField("date", isLessThan: Timestamp(date: today))
+                .getDocuments()
+            
+            print("🌙 Sunday night updates (6PM to midnight): \(sundayNightUpdates.documents.count)")
+            
+            // 5. Verify that the coach can read this client's updates
+            if let currentUser = auth.currentUser {
+                print("👨‍🏫 Current user (coach) ID: \(currentUser.uid)")
+                
+                // Get the client's group ID
+                if let clientData = clientDoc.data(), let clientGroupId = clientData["groupId"] as? String {
+                    print("🏢 Client's group ID: \(clientGroupId)")
+                    
+                    // Get the group document to check if current user is the coach
+                    let groupDoc = try await db.collection("groups").document(clientGroupId).getDocument()
+                    if let groupData = groupDoc.data(), let coachId = groupData["coachId"] as? String {
+                        print("👨‍🏫 Group's coach ID: \(coachId)")
+                        print("✅ Current user is the coach: \(coachId == currentUser.uid ? "YES" : "NO")")
+                    }
+                }
+            }
+            
+            print("🔍 DEBUG COMPLETED")
+        } catch {
+            print("❌ DEBUG ERROR: \(error.localizedDescription)")
+        }
+    }
 }
 
 // MARK: - Group Actions Extension
