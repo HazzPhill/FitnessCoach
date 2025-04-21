@@ -518,6 +518,7 @@ struct ClientHome: View {
     }
 }
 
+
 // Date formatter for the debug timestamp
 private let itemFormatter: DateFormatter = {
     let formatter = DateFormatter()

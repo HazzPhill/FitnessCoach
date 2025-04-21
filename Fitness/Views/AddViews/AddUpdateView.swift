@@ -95,7 +95,7 @@ struct AddUpdateView: View {
                                 
                                 TextEditor(text: $biggestWin)
                                     .font(themeManager.bodyFont())
-                                    .scrollContentBackground(.hidden) // This is key - hides the default background
+                                    .scrollContentBackground(.hidden)
                                     .background(Color.clear)
                                     .foregroundColor(themeManager.textColor(for: colorScheme))
                             }
@@ -116,7 +116,7 @@ struct AddUpdateView: View {
                                 
                                 TextEditor(text: $issues)
                                     .font(themeManager.bodyFont())
-                                    .scrollContentBackground(.hidden) // This is key - hides the default background
+                                    .scrollContentBackground(.hidden)
                                     .background(Color.clear)
                                     .foregroundColor(themeManager.textColor(for: colorScheme))
                             }
@@ -137,7 +137,7 @@ struct AddUpdateView: View {
                                 
                                 TextEditor(text: $extraCoachRequest)
                                     .font(themeManager.bodyFont())
-                                    .scrollContentBackground(.hidden) // This is key - hides the default background
+                                    .scrollContentBackground(.hidden)
                                     .background(Color.clear)
                                     .foregroundColor(themeManager.textColor(for: colorScheme))
                             }
@@ -145,6 +145,7 @@ struct AddUpdateView: View {
                             .padding(.horizontal)
                         }
                         
+                        // Performance Ratings Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Performance Ratings")
                                 .font(themeManager.headingFont(size: 18))
@@ -330,6 +331,13 @@ struct AddUpdateView: View {
             return
         }
         
+        // Calculate mapped scores from raw ratings
+        let caloriesScore = mapSevenRating(caloriesRating)
+        let stepsScore = mapSevenRating(stepsRating)
+        let proteinScore = mapSevenRating(proteinRating)
+        let trainingScore = mapFiveRating(trainingRating)
+        let finalScore = caloriesScore + stepsScore + proteinScore + trainingScore
+        
         isSubmitting = true
         Task {
             do {
@@ -340,18 +348,20 @@ struct AddUpdateView: View {
                     biggestWin: biggestWin,
                     issues: issues,
                     extraCoachRequest: extraCoachRequest,
-                    finalScore: finalScore
+                    caloriesRating: caloriesRating,    // Raw value from dropdown
+                    stepsRating: stepsRating,          // Raw value from dropdown
+                    proteinRating: proteinRating,      // Raw value from dropdown
+                    trainingRating: trainingRating,    // Raw value from dropdown
+                    caloriesScore: caloriesScore,      // Mapped value
+                    stepsScore: stepsScore,            // Mapped value
+                    proteinScore: proteinScore,        // Mapped value
+                    trainingScore: trainingScore,      // Mapped value
+                    finalScore: finalScore             // Calculated total
                 )
                 
-                // Force refresh the updates collection
                 authManager.refreshWeeklyUpdates()
-                
-                // Post notification that weekly check-in status changed
                 NotificationCenter.default.post(name: .weeklyCheckInStatusChanged, object: nil)
-                
-                // Add a small delay to ensure Firebase operations complete
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-                
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds delay
                 dismiss()
             } catch {
                 errorMessage = error.localizedDescription

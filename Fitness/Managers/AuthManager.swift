@@ -67,11 +67,17 @@ class AuthManager: ObservableObject {
         let biggestWin: String?
         let issues: String?
         let extraCoachRequest: String?
-        let caloriesScore: Double?
-        let stepsScore: Double?
-        let proteinScore: Double?
-        let trainingScore: Double?
-        let finalScore: Double?
+        // Raw ratings from dropdowns
+        let caloriesRating: Int?    // e.g., 5 (out of 7)
+        let stepsRating: Int?       // e.g., 6 (out of 7)
+        let proteinRating: Int?     // e.g., 4 (out of 7)
+        let trainingRating: Int?    // e.g., 3 (out of 5)
+        // Mapped scores for final score calculation
+        let caloriesScore: Double?  // e.g., 1.8
+        let stepsScore: Double?     // e.g., 2.0
+        let proteinScore: Double?   // e.g., 1.4
+        let trainingScore: Double?  // e.g., 1.5
+        let finalScore: Double?     // e.g., 6.7 (sum of mapped scores)
         @ServerTimestamp var date: Date?
     }
     
@@ -564,41 +570,68 @@ class AuthManager: ObservableObject {
     
     // MARK: - Update Management
     
-    func addUpdate(name: String, weight: Double, image: UIImage?, biggestWin: String, issues: String, extraCoachRequest: String, finalScore: Double) async throws {
-        guard let currentUser = currentUser else {
+    func addUpdate(
+        name: String,
+        weight: Double,
+        image: UIImage?,
+        biggestWin: String?,
+        issues: String?,
+        extraCoachRequest: String?,
+        caloriesRating: Int?,
+        stepsRating: Int?,
+        proteinRating: Int?,
+        trainingRating: Int?,
+        caloriesScore: Double?,
+        stepsScore: Double?,
+        proteinScore: Double?,
+        trainingScore: Double?,
+        finalScore: Double?
+    ) async throws {
+        guard let currentUser = auth.currentUser else {
             throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"])
         }
+        
         var imageUrl: String? = nil
         if let image = image {
             if let url = try await uploadUpdateImage(image: image) {
                 imageUrl = url.absoluteString
             }
         }
-        let updateData: [String: Any] = [
-            "userId": currentUser.userId,
+        
+        var updateData: [String: Any] = [
+            "userId": currentUser.uid,
             "name": name,
             "weight": weight,
-            "imageUrl": imageUrl as Any,
-            "biggestWin": biggestWin,
-            "issues": issues,
-            "extraCoachRequest": extraCoachRequest,
-            "finalScore": finalScore,
-            "date": Timestamp(date: Date())
+            "date": FieldValue.serverTimestamp(),
+            "caloriesRating": caloriesRating as Any,
+            "stepsRating": stepsRating as Any,
+            "proteinRating": proteinRating as Any,
+            "trainingRating": trainingRating as Any,
+            "caloriesScore": caloriesScore as Any,
+            "stepsScore": stepsScore as Any,
+            "proteinScore": proteinScore as Any,
+            "trainingScore": trainingScore as Any,
+            "finalScore": finalScore as Any
         ]
+        
+        if let imageUrl = imageUrl { updateData["imageUrl"] = imageUrl }
+        if let biggestWin = biggestWin { updateData["biggestWin"] = biggestWin }
+        if let issues = issues { updateData["issues"] = issues }
+        if let extraCoachRequest = extraCoachRequest { updateData["extraCoachRequest"] = extraCoachRequest }
+        
         _ = try await db.collection("updates").addDocument(data: updateData)
     }
-    
-    private func uploadUpdateImage(image: UIImage) async throws -> URL? {
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else { return nil }
-        let fileName = UUID().uuidString + ".jpg"
-        let storageRef = storage.reference().child("updates/\(fileName)")
-        let metadata = StorageMetadata()
-        metadata.contentType = "image/jpeg"
-        let _ = try await storageRef.putDataAsync(imageData, metadata: metadata)
-        let url = try await storageRef.downloadURL()
-        return url
-    }
-    
+
+        // Helper function to upload image
+        private func uploadUpdateImage(image: UIImage) async throws -> URL? {
+            let storageRef = storage.reference().child("updates/\(UUID().uuidString).jpg")
+            guard let imageData = image.jpegData(compressionQuality: 0.8) else { return nil }
+            let metadata = StorageMetadata()
+            metadata.contentType = "image/jpeg"
+            _ = try await storageRef.putDataAsync(imageData, metadata: metadata)
+            return try await storageRef.downloadURL()
+        }
+        
     func updateGroupPhoto(image: UIImage) async throws {
         guard let groupId = currentGroup?.id else { return }
         guard let imageData = image.jpegData(compressionQuality: 0.8) else { return }
@@ -1122,75 +1155,7 @@ extension AuthManager {
     
     // Public method to check if user can actually submit a check-in
     func canSubmitWeeklyCheckin() -> Bool {
-        // Get the current date and calendar
-        let now = Date()
-        let calendar = Calendar.current
-        let weekday = calendar.component(.weekday, from: now)
-        
-        print("🔍 BUTTON DEBUG: Checking if user can submit weekly check-in")
-        print("🔍 BUTTON DEBUG: Current weekday: \(weekday) (1=Sunday, 7=Saturday)")
-        
-        // PRIORITY FIX: First check if it's the weekend
-        if weekday == 1 || weekday == 7 {
-            print("🔍 BUTTON DEBUG: It's the weekend, checking if submitted THIS week")
-            
-            // Calculate the start of the current week (Sunday)
-            let today = calendar.startOfDay(for: now)
-            let startOfWeek: Date
-            
-            // If today is Sunday, it's the start of the week
-            if weekday == 1 {
-                startOfWeek = today
-                print("🔍 BUTTON DEBUG: Today is Sunday - start of week is today")
-            } else {
-                // If today is Saturday, we need to find the previous Sunday
-                let daysToSubtract = 6 // 6 days back from Saturday to get to Sunday
-                if let date = calendar.date(byAdding: .day, value: -daysToSubtract, to: today) {
-                    startOfWeek = date
-                    print("🔍 BUTTON DEBUG: Today is Saturday - start of week is \(startOfWeek)")
-                } else {
-                    // Fallback
-                    startOfWeek = today
-                    print("🔍 BUTTON DEBUG: Error calculating start of week, using today")
-                }
-            }
-            
-            // Has user already submitted a check-in for THIS week?
-            if let currentUserId = self.currentUser?.userId {
-                let hasCheckInThisWeek = latestUpdates.contains { update in
-                    guard let updateDate = update.date else { return false }
-                    let updateDay = calendar.startOfDay(for: updateDate)
-                    let isThisWeek = updateDay >= startOfWeek && updateDay <= today
-                    let isCurrentUser = update.userId == currentUserId
-                    
-                    print("🔍 BUTTON DEBUG: Checking update: date=\(updateDate), isThisWeek=\(isThisWeek), isCurrentUser=\(isCurrentUser)")
-                    
-                    return isThisWeek && isCurrentUser
-                }
-                
-                if hasCheckInThisWeek {
-                    print("🔍 BUTTON DEBUG: User already has a check-in THIS week")
-                    return false // Already submitted this week
-                } else {
-                    print("🔍 BUTTON DEBUG: No check-in found THIS week, allowing submission")
-                    return true // It's the weekend and no check-in yet for this week
-                }
-            }
-            
-            return true // Default to allowing check-ins on weekends if no user ID
-        }
-        
-        // For non-weekend days, always disable the button
-        print("🔍 BUTTON DEBUG: Not the weekend, disabling button")
-        return false
-        
-#if DEBUG
-        // Testing mode override
-        if testingModeEnabled {
-            print("🔍 BUTTON DEBUG: Testing mode enabled, overriding to true")
-            return true
-        }
-#endif
+        return true // Temporarily allow submission any day
     }
     
     func dismissMissedCheckinBanner() {

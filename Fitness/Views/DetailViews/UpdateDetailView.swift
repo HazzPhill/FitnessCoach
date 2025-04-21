@@ -169,15 +169,10 @@ struct UpdateDetailView: View {
                 .padding(.horizontal)
                 
                 // Scores Box
-                ScoresBoxView(
-                    calories: update.caloriesScore ?? 0,
-                    protein: update.proteinScore ?? 0,
-                    steps: update.stepsScore ?? 0,
-                    training: update.trainingScore ?? 0,
-                    total: update.finalScore ?? 0
-                )
-                .environmentObject(themeManager)
-                .padding(.horizontal)
+                ScoresBoxView(update: update)
+                    .environmentObject(themeManager)
+                    .padding(.horizontal)
+              
                 
                 // Reflection answers
                 if let win = update.biggestWin, !win.isEmpty {
@@ -271,23 +266,19 @@ struct UpdateDetailView: View {
 }
 
 struct ScoresBoxView: View {
-    let calories: Double
-    let protein: Double
-    let steps: Double
-    let training: Double
-    let total: Double
+    let update: AuthManager.Update
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         VStack(spacing: 12) {
-            // Individual score rows
+            // Individual rating rows - showing raw ratings instead of scores
             HStack {
                 Text("Calories")
                     .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
                 Spacer()
-                Text("\(Int(calories))/7")
+                Text("\(update.caloriesRating ?? 0)/7")
                     .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
             }
@@ -296,7 +287,7 @@ struct ScoresBoxView: View {
                     .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
                 Spacer()
-                Text("\(Int(protein))/7")
+                Text("\(update.proteinRating ?? 0)/7")
                     .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
             }
@@ -305,7 +296,7 @@ struct ScoresBoxView: View {
                     .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
                 Spacer()
-                Text("\(Int(steps))/7")
+                Text("\(update.stepsRating ?? 0)/7")
                     .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
             }
@@ -314,19 +305,19 @@ struct ScoresBoxView: View {
                     .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
                 Spacer()
-                Text("\(Int(training))/5")
+                Text("\(update.trainingRating ?? 0)/5")
                     .font(themeManager.bodyFont())
                     .foregroundColor(themeManager.textColor(for: colorScheme))
             }
             
-            // Total row
+            // Total score row - still showing the calculated total
             HStack {
                 Text("Total")
                     .font(themeManager.bodyFont())
                     .fontWeight(.semibold)
                     .foregroundColor(themeManager.textColor(for: colorScheme))
                 Spacer()
-                Text(String(format: "%.0f/10", total))
+                Text(String(format: "%.1f/10", update.finalScore ?? 0))
                     .font(themeManager.bodyFont())
                     .fontWeight(.semibold)
                     .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
