@@ -22,7 +22,6 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            // Request notification permission and schedule notifications
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
                 if granted {
                     scheduleWeeklyNotification()
@@ -39,7 +38,6 @@ struct ContentView: View {
         }
     }
     
-    // Scheduling functions can be defined within your ContentView
     func scheduleWeeklyNotification() {
         let content = UNMutableNotificationContent()
         content.title = "Weekly Checkin"
@@ -47,8 +45,8 @@ struct ContentView: View {
         content.sound = .default
 
         var dateComponents = DateComponents()
-        dateComponents.weekday = 1  // Sunday
-        dateComponents.hour = 9     // Adjust as needed (e.g., 9 AM)
+        dateComponents.weekday = 1
+        dateComponents.hour = 9
         dateComponents.minute = 0
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
@@ -68,7 +66,7 @@ struct ContentView: View {
         content.sound = .default
 
         var dateComponents = DateComponents()
-        dateComponents.hour = 20  // 8 PM
+        dateComponents.hour = 20
         dateComponents.minute = 0
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
@@ -86,7 +84,7 @@ struct ContentView: View {
             if authManager.currentUser?.role == .coach {
                 CoachHome()
             } else if let client = authManager.currentUser {
-                ClientHome(client: client)
+                ClientTabView(client: client)
             } else {
                 EmptyView()
             }
@@ -98,12 +96,62 @@ struct ContentView: View {
             if authManager.currentUser?.role == .coach {
                 CreateGroup()
             } else {
-                EnterCodeView() // Direct clients to code entry
+                EnterCodeView()
             }
         }
+    }
+}
+
+struct ClientTabView: View {
+    let client: AuthManager.DBUser // Use AuthManager.DBUser instead of User
+    
+    var body: some View {
+        TabView {
+            ClientHome(client: client) // Ensure ClientHome accepts AuthManager.DBUser
+                .tabItem {
+                    Label("Home", systemImage: "house")
+                }
+            
+            GoalsView(client: client)
+                .tabItem {
+                    Label("Goals", systemImage: "target")
+                }
+            
+            MealsView()
+                .tabItem {
+                    Label("Meals", systemImage: "fork.knife")
+                }
+            
+            CheckinsView(client: client)
+                .tabItem {
+                    Label("Checkins", systemImage: "checkmark.square")
+                }
+        }
+        .glassTabBarStyle()
+    }
+}
+
+
+struct MealsView: View {
+    var body: some View {
+        Text("Meals")
+    }
+}
+
+extension View {
+    func glassTabBarStyle() -> some View {
+        self.modifier(GlassTabBarModifier())
+    }
+}
+
+struct GlassTabBarModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .toolbarBackground(.ultraThinMaterial, for: .tabBar)
     }
 }
 
 #Preview {
     ContentView().environmentObject(AuthManager.shared)
 }
+

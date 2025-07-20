@@ -17,7 +17,7 @@ struct LoginView: View {
     
     var body: some View {
         ZStack {
-            themeManager.accentColor(for: colorScheme)
+            Color.clear
                 .ignoresSafeArea()
             
             VStack(alignment: .leading, spacing: 16) {
@@ -25,41 +25,31 @@ struct LoginView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Welcome back!")
                         .font(themeManager.bodyFont(size: 20))
-                        .foregroundStyle(.white)
                         .opacity(formAppeared ? 1 : 0)
                         .offset(y: formAppeared ? 0 : 20)
                     
                     Text("Login")
                         .font(themeManager.headingFont(size: 30))
-                        .foregroundStyle(.white)
                         .opacity(formAppeared ? 1 : 0)
                         .offset(y: formAppeared ? 0 : 20)
                 }
                 .padding(.bottom, 16)
                 
-                StrokedTextField(
+                GlassTextField(
                     text: $email,
                     label: "Email",
                     placeholder: "info@example.com",
-                    strokeColor: .white,
-                    textColor: .white,
-                    labelColor: .white.opacity(0.9),
                     cornerRadius: 8,
-                    lineWidth: 1,
                     iconName: "envelope"
                 )
                 .opacity(formAppeared ? 1 : 0)
                 .offset(y: formAppeared ? 0 : 15)
                 
-                StrokedSecureField(
+                GlassSecureField(
                     text: $password,
                     label: "Password",
                     placeholder: "••••••••",
-                    strokeColor: .white,
-                    textColor: .white,
-                    labelColor: .white.opacity(0.9),
-                    cornerRadius: 8,
-                    lineWidth: 1
+                    cornerRadius: 8
                 )
                 .opacity(formAppeared ? 1 : 0)
                 .offset(y: formAppeared ? 0 : 15)
@@ -70,7 +60,7 @@ struct LoginView: View {
                     Button(action: forgotPassword) {
                         Text("Forgot Password?")
                             .font(themeManager.bodyFont(size: 13))
-                            .foregroundColor(.white.opacity(0.9))
+                            .foregroundColor(themeManager.accentColor(for: colorScheme))
                             .padding(.trailing, 8)
                     }
                     .disabled(isResettingPassword)
@@ -94,13 +84,6 @@ struct LoginView: View {
                     loginUser()
                 }) {
                     ZStack {
-                        // Button background
-                        RoundedRectangle(cornerRadius: 25)
-                            .fill(Color.white)
-                            .frame(height: 50)
-                            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-                            .scaleEffect(animateButton ? 1.02 : 1)
-                        
                         if authManager.isLoading || isResettingPassword {
                             ProgressView()
                                 .tint(themeManager.accentColor(for: colorScheme))
@@ -109,23 +92,23 @@ struct LoginView: View {
                             Text("Log in")
                                 .font(themeManager.bodyFont(size: 16))
                                 .fontWeight(.semibold)
-                                .foregroundColor(themeManager.accentColor(for: colorScheme))
+                                .foregroundStyle(.white)
                         }
                     }
                 }
-                .padding(.top, 8)
+                .padding()
                 .disabled(authManager.isLoading || isResettingPassword)
-                .opacity(formAppeared ? 1 : 0)
-                .offset(y: formAppeared ? 0 : 20)
+                .glassEffect(.regular.interactive().tint(Color(hex: "002E37")))
             }
             .padding()
             .alert("Password Reset", isPresented: $showResetAlert) {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(resetMessage)
-                    .font(themeManager.bodyFont())
+                    .font(.caption)
             }
         }
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 30))
         .onAppear {
             // Animate form elements
             withAnimation(.easeOut(duration: 0.6)) {

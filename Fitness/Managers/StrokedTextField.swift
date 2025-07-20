@@ -68,23 +68,23 @@ struct StrokedTextField: View {
             // Label
             Text(label)
                 .font(themeManager.captionFont())
-                .foregroundColor(labelColor)
+                
             
             // TextField with optional icon
             HStack {
                 TextField("", text: $text)
                     .font(themeManager.bodyFont())
-                    .foregroundColor(textColor)
+                    
                     .placeholder(when: text.isEmpty) {
                         Text(placeholder)
                             .font(themeManager.bodyFont())
-                            .foregroundColor(.white) // Custom placeholder color
+                           
                     }
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
                 if let iconName = iconName {
                     Image(systemName: iconName)
-                        .foregroundColor(textColor)
+                        
                 }
             }
             .padding()
@@ -220,66 +220,20 @@ struct LoadingButton: View {
 struct ModernRoleSelector: View {
     @Binding var selectedRole: UserRole
     @EnvironmentObject var themeManager: ThemeManager
-    @Environment(\.colorScheme) var colorScheme: SwiftUI.ColorScheme
-    
-    // Animation state
-    @Namespace private var animation
-    @State private var animateSelection = false
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             Text("I am a")
                 .font(themeManager.captionFont())
-                .foregroundColor(.white.opacity(0.9))
-                .padding(.horizontal, 4)
+                .foregroundColor(.gray)
             
-            // Custom segmented control
-            ZStack(alignment: .center) {
-                // Background
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white.opacity(0.15))
-                    .frame(height: 60)
-                
-                // Selection tabs
-                HStack(spacing: 0) {
-                    ForEach(UserRole.allCases, id: \.self) { role in
-                        RoleOption(
-                            role: role,
-                            isSelected: selectedRole == role,
-                            namespace: animation,
-                            animateSelection: animateSelection,
-                            swiftUIColorScheme: colorScheme
-                        )
-                        .environmentObject(themeManager)
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                selectedRole = role
-                                
-                                // Trigger animation sequence
-                                animateSelection = false
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        animateSelection = true
-                                    }
-                                }
-                                
-                                // Haptic feedback
-                                let generator = UIImpactFeedbackGenerator(style: .light)
-                                generator.impactOccurred()
-                            }
-                        }
-                    }
-                }
-                .padding(5)
+            Picker("Role", selection: $selectedRole) {
+                Text("Client").tag(UserRole.client)
+                Text("Coach").tag(UserRole.coach)
             }
-        }
-        .onAppear {
-            // Initial animation
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    animateSelection = true
-                }
-            }
+            .pickerStyle(.segmented)
+            .glassEffect(.regular.interactive().tint(themeManager.accentColor(for: colorScheme)))
         }
     }
 }

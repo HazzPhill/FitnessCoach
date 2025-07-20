@@ -36,82 +36,96 @@ struct DailyCheckinPreview: View {
         return formatter.string(from: date)
     }
     
-    var body: some View {
-        HStack {
-            // Left side: First image or placeholder
-            if let imageUrl = checkin.imageUrls?.first, let url = URL(string: imageUrl) {
+    private var backgroundView: some View {
+        if let imageUrl = checkin.imageUrls?.first, let url = URL(string: imageUrl) {
+            return AnyView(
                 AsyncImage(url: url) { phase in
                     if let image = phase.image {
                         image
                             .resizable()
-                            .scaledToFill()
-                            .frame(width: 60, height: 83)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .aspectRatio(contentMode: .fill)
                     } else if phase.error != nil {
                         Image("gym_background")
                             .resizable()
-                            .scaledToFill()
-                            .frame(width: 60, height: 83)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            .aspectRatio(contentMode: .fill)
                     } else {
                         ProgressView()
-                            .frame(width: 60, height: 83)
                     }
                 }
-            } else {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(themeManager.accentColor(for: colorScheme).opacity(0.2))
-                        .frame(width: 60, height: 83)
-                    
-                    Image(systemName: "checkmark.circle")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 30, height: 30)
-                        .foregroundColor(themeManager.accentColor(for: colorScheme))
-                }
-            }
+            )
+        } else {
+            return AnyView(
+                Image("gym_background")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            )
+        }
+    }
+    
+    var body: some View {
+        ZStack {
+            backgroundView
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            // Right side: Info
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
                 HStack {
                     Text(formattedDay(from: checkin.date))
-                        .font(themeManager.headingFont(size: 16))
-                        .foregroundColor(themeManager.textColor(for: colorScheme))
+                        .font(themeManager.headingFont(size: 20))
                     Spacer()
-                    Text(formattedDate(from: checkin.date))
-                        .font(themeManager.bodyFont(size: 14))
-                        .foregroundColor(themeManager.textColor(for: colorScheme))
                 }
                 
                 Text("\(completedGoalsCount)/\(totalGoalsCount) Goals Completed")
-                    .font(themeManager.bodyFont(size: 14))
-                    .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
+                    .font(themeManager.bodyFont(size: 12))
                 
-                // Progress bar
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
-                            .frame(height: 6)
-                            .cornerRadius(3)
+                            .frame(height: 4)
+                            .cornerRadius(2)
                         
                         Rectangle()
                             .fill(themeManager.accentOrWhiteText(for: colorScheme))
-                            .frame(width: geometry.size.width * CGFloat(completion), height: 6)
-                            .cornerRadius(3)
+                            .frame(width: geometry.size.width * CGFloat(completion), height: 4)
+                            .cornerRadius(2)
                     }
                 }
-                .frame(height: 6)
+                .frame(height: 4)
+                
+                HStack {
+                    Spacer()
+                    Text(formattedDate(from: checkin.date))
+                        .font(themeManager.bodyFont(size: 12))
+                }
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20))
+            .padding(8)
         }
         .frame(maxWidth: .infinity, maxHeight: 93)
-        .padding()
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(hex: "C6C6C6"), lineWidth: 3)
-        )
-        .background(themeManager.cardBackgroundColor(for: colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
+}
+
+
+#Preview {
+    let sampleGoals = [
+        CompletedGoal(goalId: "1", name: "Calories", completed: true),
+        CompletedGoal(goalId: "2", name: "Steps", completed: false),
+        CompletedGoal(goalId: "3", name: "Protein", completed: true)
+    ]
+    let sampleCheckin = DailyCheckin(
+        id: "1",
+        userId: "user123",
+        date: Date(),
+        completedGoals: sampleGoals,
+        notes: "Sample notes",
+        imageUrls: nil,
+        timestamp: Date()
+    )
+    return DailyCheckinPreview(checkin: sampleCheckin)
+        .environmentObject(ThemeManager())
+        .padding()
+        .background(Color(hex: "F9F8F4"))
 }

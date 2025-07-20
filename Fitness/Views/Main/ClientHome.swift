@@ -558,3 +558,16 @@ private func isMostVisible(geometry: GeometryProxy) -> Bool {
     // This card is considered "most visible" if it's within 50 points of the center
     return abs(cardMidPoint - midPoint) < 50
 }
+
+#Preview {
+    // Dummy user for preview
+    let sampleUser = AuthManager.DBUser(
+        userId: "preview123",
+        firstName: "Preview",
+        lastName: "User",
+        email: "preview@example.com",
+        role: .client,
+        profileImageUrl: nil
+    )
+    ClientHome(client: sampleUser)
+}

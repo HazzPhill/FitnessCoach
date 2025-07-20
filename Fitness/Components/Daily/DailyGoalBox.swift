@@ -27,31 +27,32 @@ struct DailyGoalBox: View {
                         showTrainingPDFViewer = true
                     }
                 }) {
-                    VStack(alignment: .leading){
+                    HStack {
                         Text(value)
                             .font(themeManager.titleFont()) // Using Stranded at 18px
                             .foregroundColor(themeManager.textColor(for: colorScheme))
-                        HStack {
-                            Text(label)
-                                .font(themeManager.captionFont()) // Using Panoragraf at 12px
-                                .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.5))
-                            
-                            // Show a small PDF icon if there's a PDF
-                            if hasPDF {
-                                Image(systemName: "doc.fill")
-                                    .font(.system(size: 10))
-                                    .foregroundColor(themeManager.accentColor(for: colorScheme))
-                            }
+                        
+                        Spacer()
+                        
+                        Text(label)
+                            .font(themeManager.captionFont()) // Using Panoragraf at 12px
+                            .foregroundColor(themeManager.textColor(for: colorScheme))
+                        
+                        // Show a small PDF icon if there's a PDF
+                        if hasPDF {
+                            Image(systemName: "doc.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(themeManager.textColor(for: colorScheme))
                         }
                     }
-                    .padding()
-                    .frame(maxWidth:.infinity, minHeight: 75, alignment: .leading)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, minHeight: 60)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color(hex: "C6C6C6"), lineWidth: 3)
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
                     )
                     .background(themeManager.cardBackgroundColor(for: colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .sheet(isPresented: $showTrainingPDFViewer) {
                     TrainingPDFViewerScreen(clientId: userId, isCoachView: false)
@@ -64,24 +65,27 @@ struct DailyGoalBox: View {
             } else {
                 // Original behavior for other goals (Calories, Steps, Protein)
                 NavigationLink {
-                   DailyGoalsView(userId: userId)
+                    DailyGoalsView(userId: userId)
                 } label: {
-                    VStack(alignment: .leading){
+                    HStack {
                         Text(value)
                             .font(themeManager.titleFont()) // Using Stranded at 18px
-                            .foregroundColor(themeManager.textColor(for: colorScheme))
+                            .foregroundStyle(.black)
+                        
+                        Spacer()
+                        
                         Text(label)
-                            .font(themeManager.captionFont()) // Using Panoragraf at 12px
-                            .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.5))
+                            .font(themeManager.bodyFont(size: 16)) // Using Panoragraf at 12px
+                            .foregroundColor(themeManager.textColor(for: colorScheme))
                     }
                     .padding()
-                    .frame(maxWidth:.infinity, minHeight: 75, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: 60)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color(hex: "C6C6C6"), lineWidth: 3)
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
                     )
                     .background(themeManager.cardBackgroundColor(for: colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             }
         }

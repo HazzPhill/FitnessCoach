@@ -1,6 +1,3 @@
-// First, update the DailyGoalsGridView in ClientHome.swift
-// This is the part where clients would see and click on the Training box
-
 import SwiftUI
 
 struct DailyGoalsGridView: View {
@@ -18,60 +15,58 @@ struct DailyGoalsGridView: View {
         _viewModel = StateObject(wrappedValue: DailyGoalsViewModel(userId: userId))
     }
     
-    let columns = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
-    ]
-    
     var body: some View {
         ScrollView {
-            LazyVGrid(columns: columns, spacing: 16) {
-                // Calories, Steps, and Protein are regular goal boxes
+            VStack(spacing: 16) {
+                // Calories
                 DailyGoalBox(label: "Calories", value: viewModel.dailyCalories.isEmpty ? "0" : viewModel.dailyCalories, userId: userId)
                     .environmentObject(themeManager)
+                
+                // Steps
                 DailyGoalBox(label: "Steps", value: viewModel.dailySteps.isEmpty ? "0" : viewModel.dailySteps, userId: userId)
                     .environmentObject(themeManager)
+                
+                // Protein
                 DailyGoalBox(label: "Protein", value: viewModel.dailyProtein.isEmpty ? "0" : viewModel.dailyProtein, userId: userId)
                     .environmentObject(themeManager)
                 
-                // Special handling for Training goal
+                // Training
                 Button(action: {
                     showTrainingPDFViewer = true
                 }) {
-                    VStack(alignment: .leading) {
+                    HStack {
                         Text(viewModel.dailyTraining.isEmpty ? "0" : viewModel.dailyTraining)
-                            .font(themeManager.titleFont())
-                            .foregroundColor(themeManager.textColor(for: colorScheme))
+                            .font(themeManager.titleFont()) // Using Stranded at 18px
+                            .foregroundStyle(.black)
+                        
+                        Spacer()
                         
                         HStack {
-                            Text("Training")
-                                .font(themeManager.captionFont())
-                                .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.5))
                             
-                            // Show PDF icon if available
                             if hasPDF {
                                 Image(systemName: "doc.fill")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 12))
                                     .foregroundColor(themeManager.accentColor(for: colorScheme))
                             }
+                            
+                            Text("Training")
+                                .font(themeManager.bodyFont(size: 16)) // Using Panoragraf at 12px
+                                .foregroundColor(themeManager.textColor(for: colorScheme))
                         }
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity, minHeight: 75, alignment: .leading)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, minHeight: 60)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color(hex: "C6C6C6"), lineWidth: 3)
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
                     )
                     .background(themeManager.cardBackgroundColor(for: colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(PlainButtonStyle())
             }
             .padding(.horizontal, 0)
-            .background(themeManager.backgroundColor(for: colorScheme))
         }
-        .edgesIgnoringSafeArea(.horizontal)
-        .background(themeManager.backgroundColor(for: colorScheme))
         .sheet(isPresented: $showTrainingPDFViewer) {
             TrainingPDFViewerScreen(clientId: userId, isCoachView: false)
                 .environmentObject(themeManager)

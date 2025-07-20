@@ -8,14 +8,19 @@ struct CreateGroup: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImage: UIImage?
     @State private var showError = false
+    @State private var showSignOutConfirmation = false
     
     var body: some View {
         NavigationStack {
             ZStack(alignment: .center) {
-                Color("SecondaryAccent")
-                    .ignoresSafeArea()
                 
-                ScrollView {
+                Image("gym_background")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .ignoresSafeArea()
+                    .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                    .allowsHitTesting(false)
+                
                     VStack(spacing: 30) {
                         headerSection
                         imageUploadSection
@@ -30,9 +35,41 @@ struct CreateGroup: View {
                         }
                     }
                     .padding()
+                    .glassEffect(.regular,in: RoundedRectangle(cornerRadius: 30))
+                    .padding()
+                
+            }
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    // Custom back button that shows sign out confirmation
+                    Button {
+                        showSignOutConfirmation = true
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Back")
+                                .font(themeManager.bodyFont(size: 16))
+                        }
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .glassEffect(.regular.interactive())
+                    }
                 }
             }
-            .navigationBarBackButtonHidden()
+            .alert("Sign Out", isPresented: $showSignOutConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Sign Out", role: .destructive) {
+                    do {
+                        try authManager.signOut()
+                    } catch {
+                        print("Error signing out: \(error.localizedDescription)")
+                    }
+                }
+            } message: {
+                Text("Are you sure you want to sign out?")
+            }
         }
     }
     
@@ -41,11 +78,11 @@ struct CreateGroup: View {
         VStack(spacing: 8) {
             Text("Create Your Group")
                 .font(themeManager.headingFont(size: 28))
-                .foregroundStyle(.white)
+                
             
             Text("Setup your training community")
                 .font(themeManager.bodyFont())
-                .foregroundStyle(.white.opacity(0.8))
+                
         }
     }
     
@@ -84,9 +121,9 @@ struct CreateGroup: View {
             text: $groupName,
             label: "Group Name",
             placeholder: "Elite Fitness Squad",
-            strokeColor: .white,
-            textColor: .white,
-            labelColor: .white.opacity(0.9),
+            strokeColor: .primary,
+            textColor: .primary,
+            labelColor: .primary,
             cornerRadius: 10,
             lineWidth: 1,
             iconName: "person.3.fill"
@@ -97,19 +134,16 @@ struct CreateGroup: View {
         Button(action: createGroup) {
             if authManager.isLoading {
                 ProgressView()
-                    .tint(Color("Accent"))
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
-                    .background(Color.white)
-                    .clipShape(Capsule())
+                    .glassEffect(.regular.tint(Color(hex: "002E37")))
             } else {
                 Text("Create Group")
                     .font(themeManager.bodyFont(size: 16))
-                    .foregroundColor(Color("Accent"))
+                    .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
-                    .background(Color.white)
-                    .clipShape(Capsule())
+                    .glassEffect(.regular.interactive().tint(Color(hex: "002E37")))
             }
         }
         .disabled(groupName.isEmpty || authManager.isLoading)

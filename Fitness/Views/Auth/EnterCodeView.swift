@@ -3,6 +3,8 @@ import SwiftUI
 struct EnterCodeView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var themeManager: ThemeManager
+    @Environment(\.colorScheme) var colorScheme
+    
     @State private var code = ""
     @State private var showError = false
     @State private var showSignOutConfirmation = false
@@ -10,20 +12,25 @@ struct EnterCodeView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .center) {
-                Color("SecondaryAccent")
+                
+                Image("gym_background")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
                     .ignoresSafeArea()
+                    .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                    .allowsHitTesting(false)
                 
                 VStack(spacing: 24) {
                     // Custom header with app fonts
                     Text("Join a Group")
                         .font(themeManager.headingFont(size: 30))
-                        .foregroundColor(.white)
+                        .foregroundColor(themeManager.accentOrWhiteText(for: colorScheme))
                         .padding(.bottom, 8)
                     
                     // Code instruction text
                     Text("Enter the 6-digit code provided by your coach to join their training group")
                         .font(themeManager.bodyFont())
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundColor(themeManager.textColor(for: colorScheme).opacity(0.8))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                         .padding(.bottom, 12)
@@ -32,9 +39,9 @@ struct EnterCodeView: View {
                         text: $code,
                         label: "Enter Group Code",
                         placeholder: "ABC123",
-                        strokeColor: .white,
-                        textColor: .white,
-                        labelColor: .white.opacity(0.9),
+                        strokeColor: .primary,
+                        textColor: .primary,
+                        labelColor: .primary,
                         cornerRadius: 8,
                         lineWidth: 1,
                         iconName: "number"
@@ -51,27 +58,27 @@ struct EnterCodeView: View {
                     Button(action: joinGroup) {
                         if authManager.isLoading {
                             ProgressView()
-                                .tint(Color("Accent"))
+                                .tint(themeManager.accentOrWhiteText(for: colorScheme))
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 50)
-                                .background(Color.white)
+                                .background(themeManager.accentOrWhiteText(for: colorScheme).opacity(0.2))
                                 .cornerRadius(25)
                         } else {
                             Text("Join Group")
                                 .font(themeManager.bodyFont(size: 16))
-                                .foregroundColor(Color("Accent"))
+                                .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 50)
-                                .background(Color.white)
-                                .cornerRadius(25)
+                                .glassEffect(.regular.tint(Color(hex: "002E37")))
                         }
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 8)
+                    .padding()
                     .disabled(code.isEmpty || authManager.isLoading)
                     .opacity(code.isEmpty ? 0.7 : 1)
                 }
                 .padding()
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 30))
+                .padding(.horizontal)
             }
             .navigationBarBackButtonHidden(true)
             .toolbar {
@@ -86,13 +93,9 @@ struct EnterCodeView: View {
                             Text("Back")
                                 .font(themeManager.bodyFont(size: 16))
                         }
-                        .foregroundColor(.white)
                         .padding(.vertical, 6)
                         .padding(.horizontal, 10)
-                        .background(
-                            Capsule()
-                                .fill(Color.white.opacity(0.2))
-                        )
+                        .glassEffect(.regular.interactive())
                     }
                 }
             }
@@ -122,6 +125,7 @@ struct EnterCodeView: View {
         }
     }
 }
+
 struct EnterCodeView_Previews: PreviewProvider {
     static var previews: some View {
         EnterCodeView()
