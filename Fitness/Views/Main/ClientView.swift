@@ -17,6 +17,7 @@ struct ClientView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var authManager: AuthManager
+    @Environment(\.dismiss) var dismiss
     
     @Namespace private var namespace
     @Namespace private var checkinNamespace
@@ -35,6 +36,11 @@ struct ClientView: View {
     
     // Debug state to track settings changes
     @State private var lastSettingsUpdate = Date()
+    
+    // Add state for remove client functionality
+    @State private var showRemoveAlert = false
+    @State private var isRemovingClient = false
+    @State private var removeError: String?
     
     // Initialize the weight view model with the current user's ID
     init(client: AuthManager.DBUser) {
@@ -143,6 +149,10 @@ struct ClientView: View {
                                 .font(themeManager.headingFont(size: 18))
                                 .foregroundStyle(themeManager.textColor(for: colorScheme))
                             WeightGraphView(weightEntries: weightViewModel.weightEntries)
+                                .environmentObject(themeManager)
+                            
+                            // NEW: Month-on-Month Progress
+                            MonthOnMonthGraphView(userId: client.userId)
                                 .environmentObject(themeManager)
                         }
                         
@@ -358,33 +368,46 @@ struct ClientView: View {
                         .environmentObject(themeManager)
                 }
                 
-                // Add settings button to the navigation bar
+                // Add settings and remove client buttons to the navigation bar
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    // Settings button with optional error indicator
-                    NavigationLink(destination: ClientSettingsView(client: client)
-                        .environmentObject(themeManager)) {
-                        ZStack {
-                            // Settings gear icon
-                            Image(systemName: "gearshape.fill")
-                                .foregroundColor(themeManager.accentColor(for: colorScheme))
-                                .font(.system(size: 22))
-                                .frame(width: 24, height: 24)
-                                .background(
-                                    Circle()
-                                        .fill(themeManager.accentColor(for: colorScheme).opacity(0.1))
-                                )
-                            
-                            // Error indicator badge (only shown when there's an error)
-                            if settingsViewModel.errorMessage != nil {
-                                Circle()
-                                    .fill(Color.red)
-                                    .frame(width: 12, height: 12)
-                                    .overlay(
-                                        Text("!")
-                                            .font(.system(size: 8, weight: .bold))
-                                            .foregroundColor(.white)
+                    HStack(spacing: 12) {
+                        // Remove client button (only for coaches)
+                        if authManager.currentUser?.role == .coach {
+                            Button {
+                                showRemoveAlert = true
+                            } label: {
+                                Image(systemName: "person.crop.circle.badge.minus")
+                                    .foregroundColor(.red)
+                                    .font(.system(size: 20))
+                            }
+                        }
+                        
+                        // Settings button with optional error indicator
+                        NavigationLink(destination: ClientSettingsView(client: client)
+                            .environmentObject(themeManager)) {
+                            ZStack {
+                                // Settings gear icon
+                                Image(systemName: "gearshape.fill")
+                                    .foregroundColor(themeManager.accentColor(for: colorScheme))
+                                    .font(.system(size: 22))
+                                    .frame(width: 24, height: 24)
+                                    .background(
+                                        Circle()
+                                            .fill(themeManager.accentColor(for: colorScheme).opacity(0.1))
                                     )
-                                    .offset(x: 18, y: -18)
+                                
+                                // Error indicator badge (only shown when there's an error)
+                                if settingsViewModel.errorMessage != nil {
+                                    Circle()
+                                        .fill(Color.red)
+                                        .frame(width: 12, height: 12)
+                                        .overlay(
+                                            Text("!")
+                                                .font(.system(size: 8, weight: .bold))
+                                                .foregroundColor(.white)
+                                        )
+                                        .offset(x: 18, y: -18)
+                                }
                             }
                         }
                     }
@@ -396,6 +419,21 @@ struct ClientView: View {
             .sheet(isPresented: $showTrainingPDFUploader) {
                 TrainingPDFViewerScreen(clientId: client.userId, isCoachView: true)
                     .environmentObject(themeManager)
+            }
+            .alert("Remove Client", isPresented: $showRemoveAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Remove", role: .destructive) {
+                    removeClient()
+                }
+            } message: {
+                Text("Are you sure you want to remove \(client.firstName) \(client.lastName) from your group? They will no longer have access to your coaching services.")
+            }
+            .alert("Error", isPresented: .constant(removeError != nil)) {
+                Button("OK") {
+                    removeError = nil
+                }
+            } message: {
+                Text(removeError ?? "An error occurred")
             }
         }
     }
@@ -518,6 +556,35 @@ struct ClientView: View {
         await MainActor.run {
             withAnimation {
                 isRefreshing = false
+            }
+        }
+    }
+    
+    // Function to remove client from group
+    private func removeClient() {
+        isRemovingClient = true
+        
+        Task {
+            do {
+                try await authManager.removeClientFromGroup(clientId: client.userId)
+                
+                // Navigate back after successful removal
+                await MainActor.run {
+                    dismiss()
+                    
+                    // Show success feedback
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.success)
+                }
+            } catch {
+                await MainActor.run {
+                    removeError = error.localizedDescription
+                    isRemovingClient = false
+                    
+                    // Show error feedback
+                    let generator = UINotificationFeedbackGenerator()
+                    generator.notificationOccurred(.error)
+                }
             }
         }
     }

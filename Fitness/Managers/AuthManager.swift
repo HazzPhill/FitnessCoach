@@ -1366,6 +1366,62 @@ extension AuthManager {
     }
 }
 
+// MARK: - Remove Client from Group Extension
+extension AuthManager {
+    // For coaches to remove a client from their group
+    func removeClientFromGroup(clientId: String) async throws {
+        guard let currentUser = self.currentUser, currentUser.role == .coach else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Only coaches can remove clients from groups"])
+        }
+        
+        guard let groupId = currentUser.groupId, let group = self.currentGroup else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "No group found"])
+        }
+        
+        // Verify this coach owns the group
+        guard group.coachId == currentUser.userId else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "You can only remove clients from groups you own"])
+        }
+        
+        // Don't allow coach to remove themselves
+        guard clientId != currentUser.userId else {
+            throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Cannot remove yourself from the group. Use delete group instead."])
+        }
+        
+        // Create a batch operation
+        let batch = db.batch()
+        
+        // 1. Remove client from group's members array
+        let groupRef = db.collection("groups").document(groupId)
+        batch.updateData([
+            "members": FieldValue.arrayRemove([clientId])
+        ], forDocument: groupRef)
+        
+        // 2. Remove groupId from client's document
+        let clientRef = db.collection("users").document(clientId)
+        batch.updateData([
+            "groupId": FieldValue.delete()
+        ], forDocument: clientRef)
+        
+        // Execute the batch
+        try await batch.commit()
+        
+        // Update the local state if needed
+        if var updatedGroup = self.currentGroup {
+            updatedGroup.members.removeAll { $0 == clientId }
+            self.currentGroup = updatedGroup
+        }
+        
+        print("✅ Successfully removed client \(clientId) from group \(groupId)")
+    }
+    
+    // Get client details for display
+    func getClientDetails(clientId: String) async throws -> DBUser? {
+        let document = try await db.collection("users").document(clientId).getDocument()
+        return try document.data(as: DBUser.self)
+    }
+}
+
 // MARK: - Group Actions Extension
 extension AuthManager {
     // For clients to leave a group

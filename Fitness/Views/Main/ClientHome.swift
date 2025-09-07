@@ -117,6 +117,12 @@ struct ClientHome: View {
                                 .environmentObject(themeManager)
                                 .id("progress-graph-\(lastSettingsUpdate.timeIntervalSince1970)")
                                 .transition(.opacity)
+                            
+                            // NEW: Month-on-Month Progress
+                            MonthOnMonthGraphView(userId: client.userId)
+                                .environmentObject(themeManager)
+                                .id("month-graph-\(lastSettingsUpdate.timeIntervalSince1970)")
+                                .transition(.opacity)
                         }
                         
                         // Daily Goals section - only show if enabled in settings

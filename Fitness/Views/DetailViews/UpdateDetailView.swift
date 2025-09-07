@@ -5,6 +5,7 @@ struct UpdateDetailView: View {
     let update: AuthManager.Update
     @State private var showingEditSheet = false
     @State private var showDeleteAlert = false
+    @State private var showFullScreenImage = false
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var themeManager: ThemeManager
@@ -50,7 +51,7 @@ struct UpdateDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Top image
+                // Top image with tap gesture for full-screen viewing
                 ZStack(alignment: .bottom) {
                     if let imageUrl = update.imageUrl, let url = URL(string: imageUrl) {
                         CachedAsyncImage(url: url) { phase in
@@ -64,6 +65,9 @@ struct UpdateDetailView: View {
                                     .scaledToFill()
                                     .frame(height: 220)
                                     .clipped()
+                                    .onTapGesture {
+                                        showFullScreenImage = true
+                                    }
                             case .failure(_):
                                 Image("gym_background")
                                     .resizable()
@@ -74,7 +78,14 @@ struct UpdateDetailView: View {
                                 EmptyView()
                             }
                         }
+                    } else {
+                        Image("gym_background")
+                            .resizable()
+                            .scaledToFill()
+                            .frame(height: 220)
+                            .clipped()
                     }
+                    
                     // Subtle gradient fade at bottom
                     LinearGradient(
                         gradient: Gradient(colors: [
@@ -85,6 +96,22 @@ struct UpdateDetailView: View {
                         endPoint: .top
                     )
                     .frame(height: 80)
+                    
+                    // Add tap hint icon
+                    if update.imageUrl != nil {
+                        VStack {
+                            Spacer()
+                            HStack {
+                                Spacer()
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white)
+                                    .padding(6)
+                                    .background(Circle().fill(Color.black.opacity(0.5)))
+                                    .padding(12)
+                            }
+                        }
+                    }
                 }
                 .ignoresSafeArea(edges: .top)
                 
@@ -221,6 +248,16 @@ struct UpdateDetailView: View {
         } message: {
             Text("Are you sure you want to delete this weekly check-in? This action cannot be undone.")
                 .font(themeManager.bodyFont())
+        }
+        .fullScreenCover(isPresented: $showFullScreenImage) {
+            if let imageUrl = update.imageUrl {
+                FullScreenImageViewer(
+                    imageUrls: [imageUrl],
+                    currentIndex: 0,
+                    isPresented: $showFullScreenImage
+                )
+                .environmentObject(themeManager)
+            }
         }
     }
     
