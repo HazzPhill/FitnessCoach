@@ -78,6 +78,13 @@ struct MonthOnMonthGraphView: View {
                                         .font(.caption2)
                                         .foregroundColor(themeManager.textColor(for: colorScheme))
                                 }
+                                
+                                PointMark(
+                                    x: .value("Month", entry.monthLabel),
+                                    y: .value("Change", entry.weightChange)
+                                )
+                                .symbolSize(80)
+                                .foregroundStyle(themeManager.accentOrWhiteText(for: colorScheme))
                             }
                             
                             // Reference line at zero
@@ -112,7 +119,7 @@ struct MonthOnMonthGraphView: View {
                                 }
                             }
                         }
-                        .chartYScale(domain: viewModel.yAxisDomain)
+                        .chartYScale(domain: 0...100)
                         .chartPlotStyle { plotArea in
                             plotArea
                                 .padding(.vertical, 8)
@@ -217,13 +224,13 @@ class MonthOnMonthViewModel: ObservableObject {
     private let db = Firestore.firestore()
     private var listener: ListenerRegistration?
     
-    var yAxisDomain: ClosedRange<Double> {
-        guard !monthlyData.isEmpty else { return -5...5 }
-        let values = monthlyData.map { $0.weightChange }
-        let minVal = min(values.min() ?? -5, -2)
-        let maxVal = max(values.max() ?? 5, 2)
-        return (minVal - 1)...(maxVal + 1)
-    }
+//    var yAxisDomain: ClosedRange<Double> {
+//        guard !monthlyData.isEmpty else { return -5...5 }
+//        let values = monthlyData.map { $0.weightChange }
+//        let minVal = min(values.min() ?? -5, -2)
+//        let maxVal = max(values.max() ?? 5, 2)
+//        return (minVal - 1)...(maxVal + 1)
+//    }
     
     init(userId: String) {
         self.userId = userId
@@ -328,3 +335,4 @@ class MonthOnMonthViewModel: ObservableObject {
         listener?.remove()
     }
 }
+

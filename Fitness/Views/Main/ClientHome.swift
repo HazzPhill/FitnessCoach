@@ -50,8 +50,6 @@ struct ClientHome: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeManager.backgroundColor(for: colorScheme)
-                    .ignoresSafeArea()
                 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {

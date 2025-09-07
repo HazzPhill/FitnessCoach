@@ -6,6 +6,7 @@ struct DailyCheckinDetailView: View {
     @State private var showingEditSheet = false
     @State private var currentImageIndex = 0
     @State private var imageTimer: Timer? = nil
+    @State private var showFullScreenImage = false
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var themeManager: ThemeManager
@@ -27,7 +28,7 @@ struct DailyCheckinDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Image carousel
+                // Image carousel with tap gesture for full-screen
                 ZStack(alignment: .bottom) {
                     if let imageUrls = checkin.imageUrls, !imageUrls.isEmpty {
                         if let url = URL(string: imageUrls[currentImageIndex]) {
@@ -42,6 +43,10 @@ struct DailyCheckinDetailView: View {
                                         .scaledToFill()
                                         .frame(height: 220)
                                         .clipped()
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            showFullScreenImage = true
+                                        }
                                 case .failure(_):
                                     Image("gym_background")
                                         .resizable()
@@ -62,8 +67,6 @@ struct DailyCheckinDetailView: View {
                             .clipped()
                     }
                     
-                    // Navigation controls removed
-                    
                     // Subtle gradient fade at bottom
                     LinearGradient(
                         gradient: Gradient(colors: [
@@ -74,6 +77,24 @@ struct DailyCheckinDetailView: View {
                         endPoint: .top
                     )
                     .frame(height: 80)
+                    .allowsHitTesting(false)
+                    
+                    // Add tap hint icon if images exist
+                    if checkin.imageUrls != nil && !checkin.imageUrls!.isEmpty {
+                        VStack {
+                            Spacer()
+                            HStack {
+                                Spacer()
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white)
+                                    .padding(6)
+                                    .background(Circle().fill(Color.black.opacity(0.5)))
+                                    .padding(12)
+                            }
+                        }
+                        .allowsHitTesting(false)
+                    }
                 }
                 .ignoresSafeArea(edges: .top)
                 
@@ -129,7 +150,6 @@ struct DailyCheckinDetailView: View {
                     }
                 }
                 .padding(.horizontal)
-                
                 
                 // Goal completion status
                 HStack(spacing: 16) {
@@ -192,7 +212,7 @@ struct DailyCheckinDetailView: View {
                     .padding(.horizontal)
                 }
                 
-                // Photos grid (thumbnails)
+                // Photos grid (thumbnails) with tap gestures
                 if let imageUrls = checkin.imageUrls, imageUrls.count > 1 {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Photos")
@@ -220,12 +240,11 @@ struct DailyCheckinDetailView: View {
                                                         RoundedRectangle(cornerRadius: 12)
                                                             .stroke(Color(hex: "C6C6C6"), lineWidth: 1)
                                                     )
+                                                    .contentShape(Rectangle())
                                                     .onTapGesture {
-                                                        withAnimation {
-                                                            currentImageIndex = index
-                                                        }
+                                                        currentImageIndex = index
+                                                        showFullScreenImage = true
                                                         stopImageTimer()
-                                                        startImageTimer()
                                                     }
                                             case .failure:
                                                 Image(systemName: "photo")
@@ -263,6 +282,16 @@ struct DailyCheckinDetailView: View {
                     .environmentObject(themeManager)
             }
         }
+        .fullScreenCover(isPresented: $showFullScreenImage) {
+            if let imageUrls = checkin.imageUrls {
+                FullScreenImageViewer(
+                    imageUrls: imageUrls,
+                    currentIndex: currentImageIndex,
+                    isPresented: $showFullScreenImage
+                )
+                .environmentObject(themeManager)
+            }
+        }
         .navigationBarHidden(true)
         .onAppear {
             startImageTimer()
@@ -272,17 +301,13 @@ struct DailyCheckinDetailView: View {
         }
     }
     
-    // Timer methods - properly placed inside the struct
+    // Timer methods
     private func startImageTimer() {
-        // Only start timer if there are multiple images
         guard let imageUrls = checkin.imageUrls, imageUrls.count > 1 else { return }
         
-        // Stop any existing timer first
         stopImageTimer()
         
-        // Create a new timer that fires every few seconds
         imageTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { _ in
-            // Update the image index with animation
             withAnimation {
                 self.currentImageIndex = (self.currentImageIndex + 1) % imageUrls.count
             }
@@ -294,11 +319,10 @@ struct DailyCheckinDetailView: View {
         imageTimer = nil
     }
     
-    // Helper function to get the day name
     private func formattedDay(from date: Date?) -> String {
         guard let date = date else { return "No date" }
         let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE" // Full day name (e.g., "Monday")
+        formatter.dateFormat = "EEEE"
         return formatter.string(from: date)
     }
 }
@@ -368,7 +392,6 @@ extension Date {
             return ""
         }
         
-        // Formatter for month abbreviated and two-digit year.
         let monthFormatter = DateFormatter()
         monthFormatter.dateFormat = "MMM"
         let monthString = monthFormatter.string(from: self)
@@ -377,7 +400,6 @@ extension Date {
         yearFormatter.dateFormat = "yy"
         let yearString = yearFormatter.string(from: self)
         
-        // Compute ordinal suffix.
         let suffix: String
         switch day {
         case 11, 12, 13: suffix = "th"

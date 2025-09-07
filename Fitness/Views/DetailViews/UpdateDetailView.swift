@@ -38,11 +38,9 @@ struct UpdateDetailView: View {
         if let index = userUpdates.firstIndex(where: { $0.id == update.id }), index > 0 {
             let previousUpdate = userUpdates[index - 1]
             let delta = update.weight - previousUpdate.weight
-            // In dark mode, use white for the text but with different opacity
             if colorScheme == .dark {
                 return delta >= 0 ? .white : .white.opacity(0.7)
             }
-            // In light mode, use accent or red
             return delta >= 0 ? themeManager.accentColor(for: colorScheme) : Color.red
         }
         return .gray
@@ -65,6 +63,7 @@ struct UpdateDetailView: View {
                                     .scaledToFill()
                                     .frame(height: 220)
                                     .clipped()
+                                    .contentShape(Rectangle())
                                     .onTapGesture {
                                         showFullScreenImage = true
                                     }
@@ -96,6 +95,7 @@ struct UpdateDetailView: View {
                         endPoint: .top
                     )
                     .frame(height: 80)
+                    .allowsHitTesting(false)
                     
                     // Add tap hint icon
                     if update.imageUrl != nil {
@@ -111,6 +111,7 @@ struct UpdateDetailView: View {
                                     .padding(12)
                             }
                         }
+                        .allowsHitTesting(false)
                     }
                 }
                 .ignoresSafeArea(edges: .top)
@@ -199,7 +200,6 @@ struct UpdateDetailView: View {
                 ScoresBoxView(update: update)
                     .environmentObject(themeManager)
                     .padding(.horizontal)
-              
                 
                 // Reflection answers
                 if let win = update.biggestWin, !win.isEmpty {
@@ -271,27 +271,21 @@ struct UpdateDetailView: View {
             do {
                 try await authManager.deleteUpdate(updateId: updateId)
                 
-                // Force a more thorough refresh of the updates
                 await MainActor.run {
-                    // First refresh immediately before notification
                     authManager.refreshWeeklyUpdates()
                     print("✅ First refresh completed after deletion")
                     
-                    // Post notification that update was deleted
                     NotificationCenter.default.post(name: .weeklyCheckInStatusChanged, object: nil)
                     print("📢 Posted weeklyCheckInStatusChanged notification")
                     
-                    // Schedule another refresh after a small delay
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         authManager.refreshWeeklyUpdates()
                         print("✅ Second refresh completed after delay")
                     }
                 }
                 
-                // Add a small delay to ensure Firebase operations complete
-                try? await Task.sleep(nanoseconds: 600_000_000) // 0.6 seconds
+                try? await Task.sleep(nanoseconds: 600_000_000)
                 
-                // Return to previous screen
                 await MainActor.run {
                     dismiss()
                 }
@@ -309,7 +303,6 @@ struct ScoresBoxView: View {
     
     var body: some View {
         VStack(spacing: 12) {
-            // Individual rating rows - showing raw ratings instead of scores
             HStack {
                 Text("Calories")
                     .font(themeManager.bodyFont())
@@ -347,7 +340,6 @@ struct ScoresBoxView: View {
                     .foregroundColor(themeManager.textColor(for: colorScheme))
             }
             
-            // Total score row - still showing the calculated total
             HStack {
                 Text("Total")
                     .font(themeManager.bodyFont())
