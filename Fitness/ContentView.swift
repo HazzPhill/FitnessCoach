@@ -103,33 +103,38 @@ struct ContentView: View {
 }
 
 struct ClientTabView: View {
-    let client: AuthManager.DBUser // Use AuthManager.DBUser instead of User
-    
+    let client: AuthManager.DBUser
+    @State private var selectedTab = 0
+
     var body: some View {
-        TabView {
-            ClientHome(client: client) // Ensure ClientHome accepts AuthManager.DBUser
+        TabView(selection: $selectedTab) {
+            ClientHome(client: client)
                 .tabItem {
                     Label("Home", systemImage: "house")
                 }
-            
+                .tag(0)
             GoalsView(client: client)
                 .tabItem {
                     Label("Goals", systemImage: "target")
                 }
-            
+                .tag(1)
             MealsView()
                 .tabItem {
                     Label("Meals", systemImage: "fork.knife")
                 }
-            
+                .tag(2)
             CheckinsView(client: client)
                 .tabItem {
                     Label("Checkins", systemImage: "checkmark.square")
                 }
+                .tag(3)
         }
+        .tint(Color(hex: "002E37")) // Only selected tab is purple; others: grey
         .glassTabBarStyle()
     }
 }
+
+
 
 
 struct MealsView: View {
